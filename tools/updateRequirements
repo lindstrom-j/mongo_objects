@@ -1,0 +1,14 @@
+#!/bin/zsh
+
+# assume this script is in the "tools" subdirectory; change to project directory
+cd $(dirname $0)/..
+PROJECT_DIR=$(pwd)
+
+# activate the project virtual environment
+source ${PROJECT_DIR}/venv/bin/activate
+echo "activating virtual environment"
+
+# update all installed packages and rewrite requirements.txt
+pip install --upgrade --disable-pip-version-check $(pip freeze --disable-pip-version-check)
+pip freeze --disable-pip-version-check > requirements.txt
+hg diff requirements.txt | cat

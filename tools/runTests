@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# assume this script is in the "tools" subdirectory; change to project directory
+cd $(dirname $0)/..
+PROJECT_DIR=$(pwd)
+
+# activate the project virtual environment
+source ${PROJECT_DIR}/venv/bin/activate
+echo "activating virtual environment"
+
+# create MongoDB directory if it doesn't exist
+if [ ! -d db ]; then
+    mkdir db
+    echo "created Mongo db directory"
+fi
+
+# start MongoDB if it isn't already running
+if ! pgrep -q mongod; then
+  mongod --dbpath db > db/mongod-console.out 2>&1 &
+  STARTED_MONGO_PID=$!
+  echo Started MongoDB PID $STARTED_MONGO_PID
+fi
+
+# set up environment
+export PYTHONPATH=${PROJECT_DIR}/src:${PROJECT_DIR}/tests:$PYTHONPATH
+
+# run the tests
+python -m pytest $*
+
+# shut down MongoDB if we started it
+if [ -n "$STARTED_MONGO_PID" ]; then
+  kill -TERM $STARTED_MONGO_PID
+fi

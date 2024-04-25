@@ -1,0 +1,41 @@
+#!/usr/bin/env zsh
+#
+# Package the project
+
+# locate the project directory; assume it is the directory above this script
+# assume this script is in the "tools" subdirectory; change to project directory
+cd $(dirname $0)/..
+PROJECT_DIR=$(pwd)
+VENV_DIR=${PROJECT_DIR}/venv
+
+# make sure there are no uncommitted changes
+if [[ $(hg status | wc -l ) -gt 0 ]]
+then
+echo "Project contains uncommitted changes; aborting build"
+hg status
+exit -1
+fi
+
+# upgrade all packages
+pip install --upgrade $(pip freeze | awk -F= '{print $1}')
+
+# create version file
+echo "__version__ = \"1.0.$(hg log --rev tip --template '{rev}')\"" > src/__about__.py
+
+# remove previous artifacts
+rm -rf ./dist 2> /dev/null
+
+# build project distribution
+if python3 -m build
+then
+echo
+echo "To upload these artifacts to PyPI, run the following command"
+echo "python3 -m twine upload dist/*"
+echo "or"
+echo "python3 -m twine upload --repository testpypi dist/*"
+
+else
+echo
+echo Build process exited with $?
+
+fi

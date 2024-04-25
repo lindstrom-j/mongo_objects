@@ -1,0 +1,32 @@
+[build-system]
+requires = [
+    "hatchling",
+]
+build-backend = "hatchling.build"
+
+[project]
+name = "mongo_objects"
+authors = [
+  { name="Jonathan Lindstrom", email="lindstrom.j@headwaters.com.sg" },
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+  "pymongo",
+]
+description = "Access MongoDB documents and subdocuments through user-defined UserDict and proxy objects."
+dynamic = ["version"]
+readme = "README.md"
+requires-python = ">=3.8"
+
+[project.urls]
+Homepage = "https://headwaters.com.sg/pycon-2023"
+
+[tool.hatch.version]
+path = "src/__about__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mongo_objects.py"]

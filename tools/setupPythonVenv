@@ -1,0 +1,59 @@
+#!/bin/zsh
+#
+# Create or update a virtual environment on a MacOS development system
+
+# assume this script is in the "tools" subdirectory; change to project directory
+cd $(dirname $0)/..
+PROJECT_DIR=$(pwd)
+PROJECT_NAME=$(basename ${PROJECT_DIR})
+VENV_DIR=${PROJECT_DIR}/venv
+
+# check the virtual environment version on MacOS
+if [[ "$(uname)" == "Darwin" ]]; then
+
+    # Make sure Homebrew Python 3.11 is installed
+    if [[ ! -e /usr/local/bin/python3.11 ]]; then
+        echo "Python 3.11 is not installed"
+        exit 1
+    fi
+
+    # If the virtual environment exists, make sure the Python 3.11 version matches
+    if [[ -d ${VENV_DIR} && "$(/usr/local/bin/python3.11 -V)" != "$(${VENV_DIR}/bin/python3 -V)" ]]; then
+        echo Removing obsolete $(${VENV_DIR}/bin/python3 -V) virtual environment
+        rm -rf ${VENV_DIR}
+    fi
+fi
+
+
+# create virtual environment if it doesn't exist
+if [[ ! -d ${VENV_DIR} ]]; then
+    # only implemented for MacOS
+    if [[ "$(uname)" == "Darwin" ]]; then
+        /usr/local/bin/python3.11 -m venv ${VENV_DIR} --prompt "${PROJECT_NAME}-dev"
+        echo initialized virtual environment ${VENV_DIR}
+    fi
+fi
+
+# activate virtual environment
+if [[ ! "$(which python)" -ef "${VENV_DIR}/bin/python3" ]]; then
+    source ${VENV_DIR}/bin/activate
+    echo activating virtual environment ${VENV_DIR}
+fi
+
+# read requirements.txt file and install or upgrade Python modules
+if [[ -f "${PROJECT_DIR}/requirements.txt" ]]; then
+    echo updating Python modules
+    # If we're using a proxy, download pysocks first as pip requires it
+    if [ -n "${ALL_PROXY}" ]
+    then
+        ALL_PROXY="" pip install --disable-pip-version-check pysocks
+    fi
+
+    # install setuptools and wheel first
+    pip install --disable-pip-version-check setuptools wheel
+
+    # now install all packages in the requirements file
+    cat ${PROJECT_DIR}/requirements.txt | xargs pip install --disable-pip-version-check
+    echo Python modules installed
+fi
+

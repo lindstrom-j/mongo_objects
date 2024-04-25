@@ -1,0 +1,12 @@
+__about__.py
+db
+dist
+docs/Makefile
+docs/source/_templates
+docs/source/_static
+docs/build
+.DS_Store
+__pycache__
+.pytest_cache
+venv
+.vscode
