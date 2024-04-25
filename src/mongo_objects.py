@@ -374,7 +374,7 @@ class PolymorphicMongoUserDict( MongoUserDict ):
 
 
     @classmethod
-    def find( cls, filter={}, projection=None, readonly=False, **kwargs ):
+    def find( cls, filter={}, projection=None, readonly=None, **kwargs ):
         '''Return matching documents as appropriate subclass instances'''
         # Authorize reading at all
         if not cls.authorize_pre_read():
@@ -391,7 +391,7 @@ class PolymorphicMongoUserDict( MongoUserDict ):
 
 
     @classmethod
-    def find_one( cls, filter={}, projection=None, readonly=False, no_match=None, **kwargs ):
+    def find_one( cls, filter={}, projection=None, readonly=None, no_match=None, **kwargs ):
         '''Return a single matching document as the appropriate subclass or None'''
         # Authorize reading at all
         if not cls.authorize_pre_read():

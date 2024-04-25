@@ -10,6 +10,7 @@ Documents are returned as UserDict subclasses:
 * convenient ``load_by_id()`` to locate documents by ObjectId
 * smart ``save()`` function to insert, upsert or replace documents as appropriate
 * automatically record document creation and update times
+* track separate object schema versions
 * support polymorphic user objects loaded from the same collection
 
 Subdocuments are accessed through dictionary proxy objects:
@@ -67,7 +68,7 @@ MongoUserDict
 
     class Event( mongo_objects.MongoUserDict ):
 
-        db = ...     # set your MongoDB database object here
+        db = ...     # provide your MongoDB database object here
         collection_name = 'events'
 
         def isFuture( self ):
