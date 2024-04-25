@@ -644,7 +644,7 @@ class TestBasics:
         assert len( result ) == MMUD.collection().count_documents( {} )
 
         # verify type and data present
-        # since no projection was used and readonly wasn't provided,
+        # since no projection was used and readonly wasn't True,
         # verify object is not marked readonly
         for x in result:
             assert isinstance( x, MMUD )
@@ -687,7 +687,7 @@ class TestBasics:
         # verify that we found a single entry
         assert len( result ) == 1
 
-        # since no projection was used and readonly wasn't provided,
+        # since no projection was used and readonly wasn't True,
         # verify object is not marked readonly
         assert result[0].readonly is False
 
@@ -762,6 +762,24 @@ class TestBasics:
             assert 'amount' in x
             assert 'name' not in x
             assert x.readonly is True
+
+
+    def test_find_projection_5( self, getPopulatedMMUDClass ):
+        '''Test find() with a "negative" projection with readonly forced to False'''
+        MMUD = getPopulatedMMUDClass
+
+        # verify that this is an unversioned test
+        assert MMUD.object_version is None
+
+        # Verify projection produced the proper key set
+        # Also confirm object is not marked readonly
+        for x in MMUD.find( {}, { '_id' : False, 'name' : False }, readonly=False ):
+            assert '_id' not in x
+            assert '_created' in x
+            assert '_updated' in x
+            assert 'amount' in x
+            assert 'name' not in x
+            assert x.readonly is False
 
 
     def test_find_readonly( self, getPopulatedMMUDClass ):
@@ -949,6 +967,24 @@ class TestBasics:
         assert 'amount' in result
         assert 'name' not in result
         assert result.readonly is True
+
+
+    def test_find_one_projection_5( self, getPopulatedMMUDClass ):
+        '''Test find() with a "negative" projection with readonly forced to False'''
+        MMUD = getPopulatedMMUDClass
+
+        # verify that this is an unversioned test
+        assert MMUD.object_version is None
+
+        # Verify projection produced the proper key set
+        # Also confirm object is not marked readonly
+        result = MMUD.find_one( {}, { '_id' : False, 'name' : False }, readonly=False )
+        assert '_id' not in result
+        assert '_created' in result
+        assert '_updated' in result
+        assert 'amount' in result
+        assert 'name' not in result
+        assert result.readonly is False
 
 
     def test_find_one_readonly( self, getPopulatedMMUDClass ):
