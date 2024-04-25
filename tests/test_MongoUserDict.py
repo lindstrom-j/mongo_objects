@@ -199,7 +199,7 @@ class TestSave:
 
         # saving it should raise an exception as no existing object can be found
         # in this case _updated starts as None but it could be anything
-        originalUpdated = obj.get('_updated')
+        original_updated = obj.get('_updated')
         with pytest.raises( Exception ):
             obj.save()
 
@@ -207,7 +207,7 @@ class TestSave:
         assert MMUD.collection().count_documents( {} ) == count
 
         # verify that _updated wasn't changed
-        assert obj.get('_updated') == originalUpdated
+        assert obj.get('_updated') == original_updated
 
         # force saving will work
         obj.save( force=True )
@@ -240,7 +240,7 @@ class TestSave:
         obj.save()
 
         # reload the data into a new object
-        obj2 = MMUD.loadById( obj.id() )
+        obj2 = MMUD.load_by_id( obj.id() )
 
         # verify the timestamps are the same
         assert obj['_updated'] == obj2['_updated']
@@ -252,12 +252,12 @@ class TestSave:
         assert obj['_updated'] > obj2['_updated']
 
         # try to save second object; it won't work
-        originalUpdated = obj2.get('_updated')
+        original_updated = obj2.get('_updated')
         with pytest.raises( Exception ):
             obj2.save()
 
         # verify that obj2 _updated is the original value
-        assert obj2.get('_updated') == originalUpdated
+        assert obj2.get('_updated') == original_updated
 
         # locate object on disk and verify _updated matches obj (not obj2)
         doc = MMUD.collection().find_one( { '_id' : obj['_id'] } )
@@ -585,13 +585,13 @@ class TestBasics:
 
 
     def test_find_one_none_custom_return( self, getPopulatedMMUDClass ):
-        '''Verify a non-matching filter produces our custom "noMatch" result'''
+        '''Verify a non-matching filter produces our custom "no_match" result'''
         MMUD = getPopulatedMMUDClass
 
         class EmptyResponse( object ):
             pass
 
-        result = MMUD.find_one( { 'not-a-field' : 'wont-match-anything' }, noMatch=EmptyResponse() )
+        result = MMUD.find_one( { 'not-a-field' : 'wont-match-anything' }, no_match=EmptyResponse() )
 
         assert isinstance( result, EmptyResponse )
 
@@ -692,22 +692,22 @@ class TestBasics:
         assert result is None
 
 
-    def test_getUniqueInteger( self, getMMUDClass ):
+    def test_get_unique_integer( self, getMMUDClass ):
         MMUD = getMMUDClass
         obj = MMUD()
         startTime = MMUD.utcnow()
 
-        # verify new object doesn't have a _lastUniqueInteger
+        # verify new object doesn't have a _last_unique_integer
         # an _id, a created or an update time
         assert '_id' not in obj
         assert '_created' not in obj
         assert '_updated' not in obj
-        assert '_lastUniqueInteger' not in obj
+        assert '_last_unique_integer' not in obj
 
         # obtain the next unique integer
-        x = obj.getUniqueInteger()
+        x = obj.get_unique_integer()
         assert x == 1
-        assert x == obj['_lastUniqueInteger']
+        assert x == obj['_last_unique_integer']
 
         # object should have been saved
         assert '_id' in obj
@@ -716,26 +716,26 @@ class TestBasics:
 
         # get 10 more integers
         for i in range(10):
-            x = obj.getUniqueInteger()
+            x = obj.get_unique_integer()
         assert x == 11
-        assert x == obj['_lastUniqueInteger']
+        assert x == obj['_last_unique_integer']
 
 
-    def test_getUniqueInteger_no_save( self, getMMUDClass ):
+    def test_get_unique_integer_no_save( self, getMMUDClass ):
         MMUD = getMMUDClass
         obj = MMUD()
 
-        # verify new object doesn't have a _lastUniqueInteger
+        # verify new object doesn't have a _last_unique_integer
         # an _id, a created or an update time
         assert '_id' not in obj
         assert '_created' not in obj
         assert '_updated' not in obj
-        assert '_lastUniqueInteger' not in obj
+        assert '_last_unique_integer' not in obj
 
         # obtain the next unique integer
-        x = obj.getUniqueInteger( autosave=False )
+        x = obj.get_unique_integer( autosave=False )
         assert x == 1
-        assert x == obj['_lastUniqueInteger']
+        assert x == obj['_last_unique_integer']
 
         # object should not have been saved
         assert '_id' not in obj
@@ -743,22 +743,35 @@ class TestBasics:
         assert '_updated' not in obj
 
 
-    def test_getUniqueKey( self, getMMUDClass ):
+    def test_get_unique_integer_migration( self, getMMUDClass ):
+        MMUD = getMMUDClass
+        obj = MMUD( { '_lastUniqueInteger' : 10 } )
+
+        # obtain the next unique integer
+        x = obj.get_unique_integer( autosave=False )
+        assert x == 11
+        assert x == obj['_last_unique_integer']
+
+        # verify that _lastUniqueInteger has been removed
+        assert '_lastUniqueInteger' not in obj
+
+
+    def test_get_unique_key( self, getMMUDClass ):
         MMUD = getMMUDClass
         obj = MMUD()
         startTime = MMUD.utcnow()
 
-        # verify new object doesn't have a _lastUniqueInteger
+        # verify new object doesn't have a _last_unique_integer
         # an _id, or an update time
         assert '_id' not in obj
         assert '_created' not in obj
         assert '_updated' not in obj
-        assert '_lastUniqueInteger' not in obj
+        assert '_last_unique_integer' not in obj
 
         # obtain the next unique key
-        x = obj.getUniqueKey()
+        x = obj.get_unique_key()
         assert x == '1'
-        assert x == str( obj['_lastUniqueInteger'] )
+        assert x == str( obj['_last_unique_integer'] )
 
         # object should have been saved
         assert '_id' in obj
@@ -767,26 +780,26 @@ class TestBasics:
 
         # get 10 more keys
         for i in range(10):
-            x = obj.getUniqueKey()
+            x = obj.get_unique_key()
         assert x == 'b'   # 11 in hex
-        assert x == f"{obj['_lastUniqueInteger']:x}"
+        assert x == f"{obj['_last_unique_integer']:x}"
 
 
-    def test_getUniqueInteger_no_save( self, getMMUDClass ):
+    def test_get_unique_integer_no_save( self, getMMUDClass ):
         MMUD = getMMUDClass
         obj = MMUD()
 
-        # verify new object doesn't have a _lastUniqueInteger
+        # verify new object doesn't have a _last_unique_integer
         # an _id, or an update time
         assert '_id' not in obj
         assert '_created' not in obj
         assert '_updated' not in obj
-        assert '_lastUniqueInteger' not in obj
+        assert '_last_unique_integer' not in obj
 
         # obtain the next unique key
-        x = obj.getUniqueKey( autosave=False )
+        x = obj.get_unique_key( autosave=False )
         assert x == '1'
-        assert x == str(obj['_lastUniqueInteger'])
+        assert x == str(obj['_last_unique_integer'])
 
         # object should not have been saved
         assert '_id' not in obj
@@ -812,14 +825,14 @@ class TestBasics:
             obj.id()
 
 
-    def test_loadById_bson( self, getPopulatedMMUDClass ):
+    def test_load_by_id_bson( self, getPopulatedMMUDClass ):
         MMUD = getPopulatedMMUDClass
 
         # load a random object
         source = MMUD.find_one()
 
         # locate it again by the MongoDB BSON id
-        result = MMUD.loadById( source['_id'] )
+        result = MMUD.load_by_id( source['_id'] )
 
         # verify the objects are the same
         assert source == result
@@ -828,14 +841,14 @@ class TestBasics:
         assert source.readonly is False
 
 
-    def test_loadById_str( self, getPopulatedMMUDClass ):
+    def test_load_by_id_str( self, getPopulatedMMUDClass ):
         MMUD = getPopulatedMMUDClass
 
         # load a random object
         source = MMUD.find_one()
 
         # locate it again by the string id
-        result = MMUD.loadById( source.id() )
+        result = MMUD.load_by_id( source.id() )
 
         # verify the objects are the same
         assert source == result
@@ -844,14 +857,14 @@ class TestBasics:
         assert result.readonly is False
 
 
-    def test_loadById_readonly( self, getPopulatedMMUDClass ):
+    def test_load_by_id_readonly( self, getPopulatedMMUDClass ):
         MMUD = getPopulatedMMUDClass
 
         # load a random object
         source = MMUD.find_one()
 
         # locate it again by the string id
-        result = MMUD.loadById( source.id(), readonly=True )
+        result = MMUD.load_by_id( source.id(), readonly=True )
 
         # verify the objects are the same
         assert source == result
@@ -860,14 +873,14 @@ class TestBasics:
         assert result.readonly is True
 
 
-    def test_loadProxyById( self, getPopulatedMMUDClass ):
+    def test_load_proxy_by_id( self, getPopulatedMMUDClass ):
         MMUD = getPopulatedMMUDClass
 
         # load a random object
         source = MMUD.find_one()
 
         # load the same object with an empty proxy tree
-        result = MMUD.loadProxyById( source.id() )
+        result = MMUD.load_proxy_by_id( source.id() )
 
         # verify the objects are the same
         assert source == result
@@ -876,14 +889,14 @@ class TestBasics:
         assert result.readonly is False
 
 
-    def test_loadProxyById_readonly( self, getPopulatedMMUDClass ):
+    def test_load_proxy_by_id_readonly( self, getPopulatedMMUDClass ):
         MMUD = getPopulatedMMUDClass
 
         # load a random object
         source = MMUD.find_one()
 
         # load the same object with an empty proxy tree
-        result = MMUD.loadProxyById( source.id(), readonly=True )
+        result = MMUD.load_proxy_by_id( source.id(), readonly=True )
 
         # verify the objects are the same
         assert source == result
@@ -892,18 +905,18 @@ class TestBasics:
         assert result.readonly is True
 
 
-    def test_splitId( self, getMMUDClass ):
+    def test_split_id( self, getMMUDClass ):
         MMUD = getMMUDClass
 
         # verify that the subdocument key separator exists
-        assert hasattr( MMUD, 'subdocKeySep' )
+        assert hasattr( MMUD, 'subdoc_key_sep' )
 
         # construct a mock subdocument ID
         a = [ '123456', '78', '90']
-        id = MMUD.subdocKeySep.join( a )
+        id = MMUD.subdoc_key_sep.join( a )
 
         # split the ID back into components
-        assert MMUD.splitId( id ) == a
+        assert MMUD.split_id( id ) == a
 
 
     def test_utcnow( self, getMMUDClass ):

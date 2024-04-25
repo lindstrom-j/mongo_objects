@@ -17,13 +17,13 @@ def getMMUDClasses( mongo_db ):
         database = mongo_db
 
     class MyMongoListProxyA( mongo_objects.MongoListProxy ):
-        containerName = 'proxyA'
+        container_name = 'proxyA'
 
     class MyMongoListProxyA1( mongo_objects.MongoListProxy ):
-        containerName = 'proxyA1'
+        container_name = 'proxyA1'
 
     class MyMongoListProxyB( mongo_objects.MongoListProxy ):
-        containerName = 'proxyB'
+        container_name = 'proxyB'
 
     return {
         'base' : MyMongoUserDict,
@@ -82,19 +82,19 @@ def getSampleParent( getPopulatedMMUDClasses ):
 def getSampleProxyA( getPopulatedMMUDClasses, getSampleParent ):
     classes = getPopulatedMMUDClasses
     # return the first proxyA in the list
-    return classes['A'].getProxies( getSampleParent )[0]
+    return classes['A'].get_proxies( getSampleParent )[0]
 
 
 @pytest.fixture( scope='class' )
 def getSampleProxyA1( getPopulatedMMUDClasses, getSampleProxyA ):
     classes = getPopulatedMMUDClasses
     # return the first proxyA1 in the list
-    return classes['A1'].getProxies( getSampleProxyA )[0]
+    return classes['A1'].get_proxies( getSampleProxyA )[0]
 
 
 # utility functions
-def getKeys( proxy ):
-    return [ proxy.getKey( doc ) for doc in proxy.getSubdocContainer() ]
+def get_keys( proxy ):
+    return [ proxy.get_key( doc ) for doc in proxy.get_subdoc_container() ]
 
 
 
@@ -106,20 +106,20 @@ class TestCreate:
 
         # record current state
         original = dict( parent )
-        count = len( proxyA.getSubdocContainer() )
+        count = len( proxyA.get_subdoc_container() )
 
         # create a new entry in a level one proxy
         newProxy = classes['A'].create( parent, { 'name' : 'new proxyA entry'} )
 
         # verify a key was added to the proxy
-        assert proxyA.subdocKeyName in newProxy
+        assert proxyA.subdoc_key_name in newProxy
 
         # verify new key exists in the list
-        assert newProxy.key in getKeys( proxyA )
+        assert newProxy.key in get_keys( proxyA )
 
         # verify a new entry was created
-        assert len( proxyA.getSubdocContainer() ) == count+1
-        assert parent['_lastUniqueInteger'] == original['_lastUniqueInteger'] + 1
+        assert len( proxyA.get_subdoc_container() ) == count+1
+        assert parent['_last_unique_integer'] == original['_last_unique_integer'] + 1
 
         # confirm the parent document was saved
         assert parent['_updated'] > original['_updated']
@@ -132,20 +132,20 @@ class TestCreate:
 
         # record current state
         original = dict( parent )
-        count = len( proxyA.getSubdocContainer() )
+        count = len( proxyA.get_subdoc_container() )
 
         # create a new entry in a level one proxy without saving the parent
         newProxy = classes['A'].create( parent, { 'name' : 'new proxyA entry'}, autosave=False )
 
         # verify a key was added to the proxy
-        assert proxyA.subdocKeyName in newProxy
+        assert proxyA.subdoc_key_name in newProxy
 
         # verify new key exists in the list
-        assert newProxy.key in getKeys( proxyA )
+        assert newProxy.key in get_keys( proxyA )
 
         # verify a new entry was created
-        assert len( proxyA.getSubdocContainer() ) == count+1
-        assert parent['_lastUniqueInteger'] == original['_lastUniqueInteger'] + 1
+        assert len( proxyA.get_subdoc_container() ) == count+1
+        assert parent['_last_unique_integer'] == original['_last_unique_integer'] + 1
 
         # confirm the parent document was not saved
         assert parent['_updated'] == original['_updated']
@@ -155,26 +155,26 @@ class TestCreate:
         classes = getPopulatedMMUDClasses
         proxyA1 = getSampleProxyA1
         proxyA = proxyA1.parent
-        parent = proxyA1.ultimateParent
+        parent = proxyA1.ultimate_parent
 
         # record current state
         original = dict( parent )
-        countA = len( proxyA.getSubdocContainer() )
-        countA1 = len( proxyA1.getSubdocContainer() )
+        countA = len( proxyA.get_subdoc_container() )
+        countA1 = len( proxyA1.get_subdoc_container() )
 
         # create a new entry in a level two proxy
         newProxy = classes['A1'].create( proxyA, { 'name' : 'new proxyA1 entry'} )
 
         # verify a key was added to the proxy
-        assert proxyA1.subdocKeyName in newProxy
+        assert proxyA1.subdoc_key_name in newProxy
 
         # verify new key exists in the list
-        assert newProxy.key in getKeys( proxyA1 )
+        assert newProxy.key in get_keys( proxyA1 )
 
         # verify a new entry was created at the second (proxyA1) level
-        assert len( proxyA.getSubdocContainer() ) == countA
-        assert len( proxyA1.getSubdocContainer() ) == countA1 + 1
-        assert parent['_lastUniqueInteger'] == original['_lastUniqueInteger'] + 1
+        assert len( proxyA.get_subdoc_container() ) == countA
+        assert len( proxyA1.get_subdoc_container() ) == countA1 + 1
+        assert parent['_last_unique_integer'] == original['_last_unique_integer'] + 1
 
         # confirm the parent document was saved
         assert parent['_updated'] > original['_updated']
@@ -184,26 +184,26 @@ class TestCreate:
         classes = getPopulatedMMUDClasses
         proxyA1 = getSampleProxyA1
         proxyA = proxyA1.parent
-        parent = proxyA1.ultimateParent
+        parent = proxyA1.ultimate_parent
 
         # record current state
         original = dict( parent )
-        countA = len( proxyA.getSubdocContainer() )
-        countA1 = len( proxyA1.getSubdocContainer() )
+        countA = len( proxyA.get_subdoc_container() )
+        countA1 = len( proxyA1.get_subdoc_container() )
 
         # create a new entry in a level two proxy without saving the parent
         newProxy = classes['A1'].create( proxyA, { 'name' : 'new proxyA1 entry'}, autosave=None )
 
         # verify a key was added to the proxy
-        assert proxyA1.subdocKeyName in newProxy
+        assert proxyA1.subdoc_key_name in newProxy
 
         # verify new key exists in the list
-        assert newProxy.key in getKeys( proxyA1 )
+        assert newProxy.key in get_keys( proxyA1 )
 
         # verify a new entry was created at the second (proxyA1) level
-        assert len( proxyA.getSubdocContainer() ) == countA
-        assert len( proxyA1.getSubdocContainer() ) == countA1 + 1
-        assert parent['_lastUniqueInteger'] == original['_lastUniqueInteger'] + 1
+        assert len( proxyA.get_subdoc_container() ) == countA
+        assert len( proxyA1.get_subdoc_container() ) == countA1 + 1
+        assert parent['_last_unique_integer'] == original['_last_unique_integer'] + 1
 
         # confirm the parent document was not saved
         assert parent['_updated'] == original['_updated']
@@ -219,16 +219,16 @@ class TestDelete_ProxyA:
 
         # record current state
         original = dict( parent )
-        count = len( proxyA.getSubdocContainer() )
+        count = len( proxyA.get_subdoc_container() )
         key = proxyA.key
 
         # delete the level one proxy
         proxyA.delete()
 
         # verify the entry was deleted
-        assert key not in getKeys( proxyA )
+        assert key not in get_keys( proxyA )
         assert proxyA.key is None
-        assert len( proxyA.getSubdocContainer() ) == count-1
+        assert len( proxyA.get_subdoc_container() ) == count-1
 
         # confirm the parent document was saved
         assert parent['_updated'] > original['_updated']
@@ -242,16 +242,16 @@ class TestDelete_ProxyA_No_Save:
 
         # record current state
         original = dict( parent )
-        count = len( proxyA.getSubdocContainer() )
+        count = len( proxyA.get_subdoc_container() )
         key = proxyA.key
 
         # delete the level one proxy without saving the parent
         proxyA.delete( autosave=False )
 
         # verify the entry was deleted
-        assert key not in getKeys( proxyA )
+        assert key not in get_keys( proxyA )
         assert proxyA.key is None
-        assert len( proxyA.getSubdocContainer() ) == count-1
+        assert len( proxyA.get_subdoc_container() ) == count-1
 
         # confirm the parent document was not saved
         assert parent['_updated'] == original['_updated']
@@ -264,22 +264,22 @@ class TestDelete_ProxyA1:
         classes = getPopulatedMMUDClasses
         proxyA1 = getSampleProxyA1
         proxyA = proxyA1.parent
-        parent = proxyA1.ultimateParent
+        parent = proxyA1.ultimate_parent
 
         # record current state
         original = dict( parent )
-        countA = len( proxyA.getSubdocContainer() )
-        countA1 = len( proxyA1.getSubdocContainer() )
+        countA = len( proxyA.get_subdoc_container() )
+        countA1 = len( proxyA1.get_subdoc_container() )
         key = proxyA1.key
 
         # delete the level one proxy
         proxyA1.delete()
 
         # verify the entry was deleted
-        assert key not in getKeys( proxyA1 )
+        assert key not in get_keys( proxyA1 )
         assert proxyA1.key is None
-        assert len( proxyA.getSubdocContainer() ) == countA
-        assert len( proxyA1.getSubdocContainer() ) == countA1 - 1
+        assert len( proxyA.get_subdoc_container() ) == countA
+        assert len( proxyA1.get_subdoc_container() ) == countA1 - 1
 
         # confirm the parent document was saved
         assert parent['_updated'] > original['_updated']
@@ -292,22 +292,22 @@ class TestDelete_ProxyA1_No_Save:
         classes = getPopulatedMMUDClasses
         proxyA1 = getSampleProxyA1
         proxyA = proxyA1.parent
-        parent = proxyA1.ultimateParent
+        parent = proxyA1.ultimate_parent
 
         # record current state
         original = dict( parent )
-        countA = len( proxyA.getSubdocContainer() )
-        countA1 = len( proxyA1.getSubdocContainer() )
+        countA = len( proxyA.get_subdoc_container() )
+        countA1 = len( proxyA1.get_subdoc_container() )
         key = proxyA1.key
 
         # delete the level one proxy
         proxyA1.delete( autosave=False )
 
         # verify the entry was deleted
-        assert key not in getKeys( proxyA )
+        assert key not in get_keys( proxyA )
         assert proxyA1.key is None
-        assert len( proxyA.getSubdocContainer() ) == countA
-        assert len( proxyA1.getSubdocContainer() ) == countA1 - 1
+        assert len( proxyA.get_subdoc_container() ) == countA
+        assert len( proxyA1.get_subdoc_container() ) == countA1 - 1
 
         # confirm the parent document was not saved
         assert parent['_updated'] == original['_updated']
@@ -358,7 +358,7 @@ class TestDelItem_A1:
         proxy.save()
 
         # locate the object on disk
-        doc = classes['base'].collection().find_one( { '_id' : proxy.ultimateParent['_id'] } )
+        doc = classes['base'].collection().find_one( { '_id' : proxy.ultimate_parent['_id'] } )
 
         # verify that the key no longer exists in the database as well
         assert 'nameA1' not in doc['proxyA'][ proxy.parent.seq ]['proxyA1'][ proxy.seq ]
@@ -469,7 +469,7 @@ class TestSetItem_A1:
         proxy.save()
 
         # locate the object on disk
-        doc = classes['base'].collection().find_one( { '_id' : proxy.ultimateParent['_id'] } )
+        doc = classes['base'].collection().find_one( { '_id' : proxy.ultimate_parent['_id'] } )
 
         # verify that the new key exists in the database as well
         assert 'newKey' in doc['proxyA'][ proxy.parent.seq ]['proxyA1'][ proxy.seq ]
@@ -533,7 +533,7 @@ class TestUpdate:
 
 
 class TestBasics:
-    def test_createKey( self, getPopulatedMMUDClasses, getSampleProxyA ):
+    def test_create_key( self, getPopulatedMMUDClasses, getSampleProxyA ):
         '''Test key creation for single and two-level proxies'''
         classes = getPopulatedMMUDClasses
         proxyA = getSampleProxyA
@@ -541,17 +541,17 @@ class TestBasics:
         updated = parent['_updated']
 
         # create a proxyA key
-        keyA = classes['A'].createKey( parent )
+        keyA = classes['A'].create_key( parent )
         assert isinstance( keyA, str )
-        assert keyA == f"{parent['_lastUniqueInteger']:x}"
+        assert keyA == f"{parent['_last_unique_integer']:x}"
 
         # create a proxyA1 key
-        keyA1 = classes['A1'].createKey( proxyA )
+        keyA1 = classes['A1'].create_key( proxyA )
         assert isinstance( keyA1, str )
-        assert keyA1 == f"{parent['_lastUniqueInteger']:x}"
+        assert keyA1 == f"{parent['_last_unique_integer']:x}"
         assert keyA != keyA1
 
-        # verify that createKey doesn't save the parent object
+        # verify that create_key doesn't save the parent object
         doc = classes['base'].collection().find_one( { '_id' : parent['_id'] } )
         assert doc['_updated'] == updated
 
@@ -577,7 +577,7 @@ class TestBasics:
     def test_data_A1( self, getSampleProxyA1 ):
         proxy = getSampleProxyA1
         # verify that the data references the same dictionary
-        assert id( proxy.data() ) == id( proxy.ultimateParent['proxyA'][ proxy.parent.seq ]['proxyA1'][ proxy.seq ] )
+        assert id( proxy.data() ) == id( proxy.ultimate_parent['proxyA'][ proxy.parent.seq ]['proxyA1'][ proxy.seq ] )
 
 
     def test_get( self, getSampleProxyA ):
@@ -606,150 +606,150 @@ class TestBasics:
             assert proxy['will-not-match']
 
 
-    def test_getKey( self, getMMUDClasses ):
+    def test_get_key( self, getMMUDClasses ):
         classes = getMMUDClasses
 
         sample = { '_sdkey' : 'proxy-key'}
 
-        assert classes['A'].getKey( sample ) == 'proxy-key'
+        assert classes['A'].get_key( sample ) == 'proxy-key'
 
 
-    def test_getKey_alt_name( self ):
+    def test_get_key_alt_name( self ):
         class MyAltListProxy( mongo_objects.MongoListProxy ):
-            subdocKeyName = 'alt-subdoc-key-name'
+            subdoc_key_name = 'alt-subdoc-key-name'
 
         sample = { 'alt-subdoc-key-name' : 'proxy-key'}
-        assert MyAltListProxy.getKey( sample ) == 'proxy-key'
+        assert MyAltListProxy.get_key( sample ) == 'proxy-key'
 
 
-    def test_getProxies( self, getPopulatedMMUDClasses, getSampleParent ):
+    def test_get_proxies( self, getPopulatedMMUDClasses, getSampleParent ):
         '''Test accessing both first-level and second-level proxy lists'''
         classes = getPopulatedMMUDClasses
         parent = getSampleParent
 
         # get all first-level proxies
-        result = classes['A'].getProxies( parent )
+        result = classes['A'].get_proxies( parent )
 
         # verify type and length of the result
         assert isinstance( result, list )
-        assert len( result ) == len( parent[ classes['A'].containerName ] )
+        assert len( result ) == len( parent[ classes['A'].container_name ] )
 
         # verify type matches
         for proxy in result:
             assert isinstance( proxy, classes['A'])
 
         # choose a proxyA to continue testing with
-        proxyA = classes['A'].getProxy( parent, seq=0 )
+        proxyA = classes['A'].get_proxy( parent, seq=0 )
 
         # get all second-level proxies
-        result = classes['A1'].getProxies( proxyA )
+        result = classes['A1'].get_proxies( proxyA )
 
         # verify type and length of the result
         assert isinstance( result, list )
-        assert len( result ) == len( parent[ classes['A'].containerName ][ proxyA.seq ][ classes['A1'].containerName ] )
+        assert len( result ) == len( parent[ classes['A'].container_name ][ proxyA.seq ][ classes['A1'].container_name ] )
 
         # verify type matches
         for proxy in result:
             assert isinstance( proxy, classes['A1'])
 
 
-    def test_getProxies_empty( self, getPopulatedMMUDClasses ):
+    def test_get_proxies_empty( self, getPopulatedMMUDClasses ):
         '''Test get proxies from an empty object'''
         classes = getPopulatedMMUDClasses
 
         # collect proxies from an empty object
-        result = classes['A'].getProxies( {} )
+        result = classes['A'].get_proxies( {} )
         assert len(result) == 0
 
 
-    def test_getProxy( self, getPopulatedMMUDClasses, getSampleParent ):
+    def test_get_proxy( self, getPopulatedMMUDClasses, getSampleParent ):
         '''Test accessing both first-level and second-level proxies'''
         classes = getPopulatedMMUDClasses
         parent = getSampleParent
 
         # locate the key for the first entry in the proxy A container
-        keyA = parent[ classes['A'].containerName ][0][ classes['A'].subdocKeyName ]
+        keyA = parent[ classes['A'].container_name ][0][ classes['A'].subdoc_key_name ]
 
         # create a first-level proxy object
-        proxyA = classes['A'].getProxy( parent, keyA )
+        proxyA = classes['A'].get_proxy( parent, keyA )
 
         # verify dictionary and type matches
-        assert id( proxyA.data() ) == id( parent[ classes['A'].containerName ][0] )
+        assert id( proxyA.data() ) == id( parent[ classes['A'].container_name ][0] )
         assert isinstance( proxyA, classes['A'] )
 
         # locate the key for the first entry in the proxy A1 container
-        keyA1 = parent[ classes['A'].containerName ][0][ classes['A1'].containerName ][0][ classes['A'].subdocKeyName ]
+        keyA1 = parent[ classes['A'].container_name ][0][ classes['A1'].container_name ][0][ classes['A'].subdoc_key_name ]
 
         # create a second-level proxy object
-        proxyA1 = classes['A1'].getProxy( proxyA, keyA1 )
+        proxyA1 = classes['A1'].get_proxy( proxyA, keyA1 )
 
         # verify dictionary and type matches
-        assert id( proxyA1.data() ) == id( parent[ classes['A'].containerName ][0][ classes['A1'].containerName ][0] )
+        assert id( proxyA1.data() ) == id( parent[ classes['A'].container_name ][0][ classes['A1'].container_name ][0] )
         assert isinstance( proxyA1, classes['A1'] )
 
 
-    def test_getProxy_by_sequence( self, getPopulatedMMUDClasses, getSampleParent ):
+    def test_get_proxy_by_sequence( self, getPopulatedMMUDClasses, getSampleParent ):
         '''Test accessing both first-level and second-level proxies'''
         classes = getPopulatedMMUDClasses
         parent = getSampleParent
 
         # create a first-level proxy object
-        proxyA = classes['A'].getProxy( parent, seq=0 )
+        proxyA = classes['A'].get_proxy( parent, seq=0 )
 
         # verify dictionary and type matches
-        assert id( proxyA.data() ) == id( parent[ classes['A'].containerName ][0] )
+        assert id( proxyA.data() ) == id( parent[ classes['A'].container_name ][0] )
         assert isinstance( proxyA, classes['A'] )
 
         # create a second-level proxy object
-        proxyA1 = classes['A1'].getProxy( proxyA, seq=0 )
+        proxyA1 = classes['A1'].get_proxy( proxyA, seq=0 )
 
         # verify dictionary and type matches
-        assert id( proxyA1.data() ) == id( parent[ classes['A'].containerName ][0][ classes['A1'].containerName ][0] )
+        assert id( proxyA1.data() ) == id( parent[ classes['A'].container_name ][0][ classes['A1'].container_name ][0] )
         assert isinstance( proxyA1, classes['A1'] )
 
 
-    def test_getSubdoc( self, getPopulatedMMUDClasses, getSampleProxyA ):
+    def test_get_subdoc( self, getPopulatedMMUDClasses, getSampleProxyA ):
         classes = getPopulatedMMUDClasses
         proxyA = getSampleProxyA
 
         # verify data location
-        assert id( proxyA.getSubdoc() ) == id( proxyA.parent[ classes['A'].containerName ][ proxyA.seq ] )
+        assert id( proxyA.get_subdoc() ) == id( proxyA.parent[ classes['A'].container_name ][ proxyA.seq ] )
 
 
-    def test_getSubdoc_A1( self, getPopulatedMMUDClasses, getSampleProxyA1 ):
+    def test_get_subdoc_A1( self, getPopulatedMMUDClasses, getSampleProxyA1 ):
         classes = getPopulatedMMUDClasses
         proxyA1 = getSampleProxyA1
 
         # verify data location
-        assert id( proxyA1.getSubdoc() ) == id( proxyA1.ultimateParent[ classes['A'].containerName ][ proxyA1.parent.seq ][ classes['A1'].containerName ][ proxyA1.seq ] )
+        assert id( proxyA1.get_subdoc() ) == id( proxyA1.ultimate_parent[ classes['A'].container_name ][ proxyA1.parent.seq ][ classes['A1'].container_name ][ proxyA1.seq ] )
 
 
-    def test_getSubdocContainer( self, getPopulatedMMUDClasses, getSampleProxyA ):
+    def test_get_subdoc_container( self, getPopulatedMMUDClasses, getSampleProxyA ):
         classes = getPopulatedMMUDClasses
         proxyA = getSampleProxyA
 
         # verify data location
-        assert id( proxyA.getSubdocContainer() ) == id( proxyA.parent[ classes['A'].containerName ] )
+        assert id( proxyA.get_subdoc_container() ) == id( proxyA.parent[ classes['A'].container_name ] )
 
 
-    def test_getSubdocContainer_A1( self, getPopulatedMMUDClasses, getSampleProxyA1 ):
+    def test_get_subdoc_container_A1( self, getPopulatedMMUDClasses, getSampleProxyA1 ):
         classes = getPopulatedMMUDClasses
         proxyA1 = getSampleProxyA1
 
         # verify data location
-        assert id( proxyA1.getSubdocContainer() ) == id( proxyA1.ultimateParent[ classes['A'].containerName ][ proxyA1.parent.seq ][ classes['A1'].containerName ] )
+        assert id( proxyA1.get_subdoc_container() ) == id( proxyA1.ultimate_parent[ classes['A'].container_name ][ proxyA1.parent.seq ][ classes['A1'].container_name ] )
 
 
     def test_id( self, getSampleProxyA ):
         '''Test ID for single level proxy'''
         proxy = getSampleProxyA
-        assert proxy.id() == f"{proxy.parent.id()}{proxy.parent.subdocKeySep}{proxy.key}"
+        assert proxy.id() == f"{proxy.parent.id()}{proxy.parent.subdoc_key_sep}{proxy.key}"
 
 
     def test_id_A1( self, getSampleProxyA1 ):
         '''Test ID for two-level proxy'''
         proxy = getSampleProxyA1
-        assert proxy.id() == f"{proxy.ultimateParent.id()}{proxy.ultimateParent.subdocKeySep}{proxy.parent.key}{proxy.ultimateParent.subdocKeySep}{proxy.key}"
+        assert proxy.id() == f"{proxy.ultimate_parent.id()}{proxy.ultimate_parent.subdoc_key_sep}{proxy.parent.key}{proxy.ultimate_parent.subdoc_key_sep}{proxy.key}"
 
 
     def test_init( self, getPopulatedMMUDClasses, getSampleParent ):
@@ -758,7 +758,7 @@ class TestBasics:
         parent = getSampleParent
 
         # pick the first proxyA key
-        keyA = parent[ classes['A'].containerName ][0][ classes['A'].subdocKeyName ]
+        keyA = parent[ classes['A'].container_name ][0][ classes['A'].subdoc_key_name ]
 
         # create the proxy
         proxyA = classes['A']( parent, keyA )
@@ -767,7 +767,7 @@ class TestBasics:
         assert id( proxyA.data() ) == id( parent['proxyA'][0] )
 
         # pick the first proxyA1 key
-        keyA1 = parent[ classes['A'].containerName ][0][ classes['A1'].containerName ][0][ classes['A1'].subdocKeyName ]
+        keyA1 = parent[ classes['A'].container_name ][0][ classes['A1'].container_name ][0][ classes['A1'].subdoc_key_name ]
 
         # create the proxy
         proxyA1 = classes['A1']( proxyA, keyA1 )
@@ -805,7 +805,7 @@ class TestBasics:
         parent = getSampleParent
 
         # pick the first proxyA key
-        keyA = parent[ classes['A'].containerName ][0][ classes['A'].subdocKeyName ]
+        keyA = parent[ classes['A'].container_name ][0][ classes['A'].subdoc_key_name ]
 
         # create the proxy with a bad sequence
         proxyA = classes['A']( parent, keyA, seq=1.0 )
@@ -814,7 +814,7 @@ class TestBasics:
         assert id( proxyA.data() ) == id( parent['proxyA'][0] )
 
         # pick the first proxyA1 key
-        keyA1 = parent[ classes['A'].containerName ][0][ classes['A1'].containerName ][0][ classes['A1'].subdocKeyName ]
+        keyA1 = parent[ classes['A'].container_name ][0][ classes['A1'].container_name ][0][ classes['A1'].subdoc_key_name ]
 
         # create the proxy
         proxyA1 = classes['A1']( proxyA, keyA1, seq=1.0 )
@@ -857,7 +857,7 @@ class TestBasics:
         classes = getPopulatedMMUDClasses
         proxy = getSampleProxyA
 
-        assert proxy.keys() == proxy.parent[ classes['A'].containerName ][ proxy.seq].keys()
+        assert proxy.keys() == proxy.parent[ classes['A'].container_name ][ proxy.seq].keys()
 
 
     def test_keys_A1( self, getPopulatedMMUDClasses, getSampleProxyA1 ):
@@ -865,7 +865,7 @@ class TestBasics:
         proxyA1 = getSampleProxyA1
         proxyA = proxyA1.parent
 
-        assert proxyA1.keys() == proxyA1.ultimateParent[ classes['A'].containerName ][ proxyA.seq ][ classes['A1'].containerName ][ proxyA1.seq ].keys()
+        assert proxyA1.keys() == proxyA1.ultimate_parent[ classes['A'].container_name ][ proxyA.seq ][ classes['A1'].container_name ][ proxyA1.seq ].keys()
 
 
     def test_save( self, getPopulatedMMUDClasses, getSampleProxyA ):
@@ -887,30 +887,30 @@ class TestBasics:
         proxyA1 = getSampleProxyA1
 
         # preserve original state
-        original = dict( proxyA1.ultimateParent )
+        original = dict( proxyA1.ultimate_parent )
 
         # save the object
         proxyA1.save()
 
         # verify the parent document was saved
-        assert proxyA1.ultimateParent['_updated'] > original['_updated']
+        assert proxyA1.ultimate_parent['_updated'] > original['_updated']
 
 
-    def test_setKey( self, getMMUDClasses ):
+    def test_set_key( self, getMMUDClasses ):
         classes = getMMUDClasses
 
         sample = {}
-        classes['A'].setKey( sample, 'proxy-key' )
+        classes['A'].set_key( sample, 'proxy-key' )
 
         assert sample['_sdkey'] == 'proxy-key'
 
 
-    def test_setKey_alt_name( self ):
+    def test_set_key_alt_name( self ):
         class MyAltListProxy( mongo_objects.MongoListProxy ):
-            subdocKeyName = 'alt-subdoc-key-name'
+            subdoc_key_name = 'alt-subdoc-key-name'
 
         sample = {}
-        MyAltListProxy.setKey( sample, 'proxy-key' )
+        MyAltListProxy.set_key( sample, 'proxy-key' )
 
         print( repr( sample ) )
         assert sample['alt-subdoc-key-name'] == 'proxy-key'
@@ -921,7 +921,7 @@ class TestBasics:
         proxy = getSampleProxyA
 
         # compare contents of values() as lists (dict_values objects don't compare properly)
-        assert list( proxy.values() ) == list( proxy.parent[ classes['A'].containerName ][ proxy.seq ].values() )
+        assert list( proxy.values() ) == list( proxy.parent[ classes['A'].container_name ][ proxy.seq ].values() )
 
 
     def test_values_A1( self, getPopulatedMMUDClasses, getSampleProxyA1 ):
@@ -930,7 +930,7 @@ class TestBasics:
         proxyA = proxyA1.parent
 
         # compare contents of values() as lists (dict_values objects don't compare properly)
-        assert list( proxyA1.values() ) == list( proxyA1.ultimateParent[ classes['A'].containerName ][ proxyA.seq ][ classes['A1'].containerName ][ proxyA1.seq ].values() )
+        assert list( proxyA1.values() ) == list( proxyA1.ultimate_parent[ classes['A'].container_name ][ proxyA.seq ][ classes['A1'].container_name ][ proxyA1.seq ].values() )
 
 
 

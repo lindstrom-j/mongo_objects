@@ -48,7 +48,7 @@ class MongoUserDict( UserDict ):
     # This may be overriden but it is the user's responsibility to guarantee that this
     # sequence will never appear in any ID or subdoc key.
     # Since the default IDs and subdoc keys are hex, 'g' is a safe separator
-    subdocKeySep = 'g'
+    subdoc_key_sep = 'g'
 
 
     def __init__( self, doc={}, readonly=False ):
@@ -89,7 +89,7 @@ class MongoUserDict( UserDict ):
         If the return value is not truthy, the data will
         not be returned.
 
-        Note that if find_one() only inspects the first document
+        Note that find_one() only inspects the first document
         returned by the underlying MongoDB find_one() call. If the
         document returned does not pass authorization, no attempt is
         made to locate another matching document.'''
@@ -137,7 +137,7 @@ class MongoUserDict( UserDict ):
 
 
     @classmethod
-    def find_one( cls, filter={}, projection=None, readonly=False, noMatch=None, **kwargs ):
+    def find_one( cls, filter={}, projection=None, readonly=False, no_match=None, **kwargs ):
         '''Return a single matching document as an instance of this class or None'''
         # Authorize reading at all
         if not cls.authorize_pre_read():
@@ -152,24 +152,30 @@ class MongoUserDict( UserDict ):
             # Authorize reading this particular document object before returning it
             if obj.authorize_read():
                 return obj
-        return noMatch
+        return no_match
 
 
-    def getUniqueInteger( self, autosave=True ):
+    def get_unique_integer( self, autosave=True ):
         '''Provide the next unique integer for this document.
         These integers are convenient for use as keys of subdocuments.
         Start with 1; 0 is reserved for single proxy documents which don't have a key.
         By default, the document is saved.'''
-        self.setdefault( '_lastUniqueInteger', 0 )
-        self['_lastUniqueInteger'] += 1
+
+        # migrate existing _lastUniqueInteger objects to _last_unique_integer
+        if '_lastUniqueInteger' in self:
+            self['_last_unique_integer'] = self['_lastUniqueInteger']
+            del self['_lastUniqueInteger']
+        else:
+            self.setdefault( '_last_unique_integer', 0 )
+        self['_last_unique_integer'] += 1
         if autosave:
             self.save()
-        return self['_lastUniqueInteger']
+        return self['_last_unique_integer']
 
 
-    def getUniqueKey( self, autosave=True ):
+    def get_unique_key( self, autosave=True ):
         '''Format the next unique integer as a hexidecimal string'''
-        return f"{self.getUniqueInteger( autosave ):x}"
+        return f"{self.get_unique_integer( autosave ):x}"
 
 
     def id( self ):
@@ -178,32 +184,32 @@ class MongoUserDict( UserDict ):
 
 
     @classmethod
-    def loadById( cls, docId, **kwargs ):
+    def load_by_id( cls, doc_id, **kwargs ):
         '''Locate a document by its database ID'''
-        return cls.find_one( { '_id' : ObjectId( docId ) }, **kwargs )
+        return cls.find_one( { '_id' : ObjectId( doc_id ) }, **kwargs )
 
 
     @classmethod
-    def loadProxyById( cls, id, *args, readonly=False ):
+    def load_proxy_by_id( cls, id, *args, readonly=False ):
         '''Based on a subdocument ID and a list of classes, load the Mongo parent
         documents, create any intermediate proxies and return the requested
         proxy object.
 
-        id is a subdocument ID string separated by subdocKeySep. It includes the
+        id is a subdocument ID string separated by subdoc_key_sep. It includes the
         ObjectId of the top-level MongoDB document
 
         args is a list of proxy objects in descending order. It does not include
         the top-level MongoUserDict class'''
 
-        # split the subdocumentId into its components
-        ids = cls.splitId( id )
+        # split the subdocument_id into its components
+        ids = cls.split_id( id )
 
         # load the MongoDB document and remove the ID from the list of ids
-        obj = cls.loadById( ids.pop(0), readonly=readonly )
+        obj = cls.load_by_id( ids.pop(0), readonly=readonly )
 
         # loop through each level of proxy using the previous object as the parent
-        for (proxyClass, id) in zip( args, ids, strict=True ):
-            obj = proxyClass.getProxy( obj, id )
+        for (proxy_subclass, id) in zip( args, ids, strict=True ):
+            obj = proxy_subclass.get_proxy( obj, id )
 
         # return the lowest-level object
         return obj
@@ -231,13 +237,13 @@ class MongoUserDict( UserDict ):
 
         # set updated timestamp
         # Note the original value in case we need to roll back
-        addedUpdated = '_updated' not in self
-        originalUpdated = self.get('_updated')
+        added_updated = '_updated' not in self
+        original_updated = self.get('_updated')
         self['_updated'] = self.utcnow()
 
         # add created timestamp if it doesn't exist
         # set flag in case we need to roll back
-        addedCreated = '_created' not in self
+        added_created = '_created' not in self
         self.setdefault( '_created', self['_updated'] )
 
         try:
@@ -253,7 +259,7 @@ class MongoUserDict( UserDict ):
             # Otherwise, only update a document with the same updated timestamp as our in-memory object
             else:
                 result = self.collection().find_one_and_replace(
-                    { '_id' : self['_id'], '_updated' : originalUpdated },
+                    { '_id' : self['_id'], '_updated' : original_updated },
                     self.data,
                     return_document=ReturnDocument.AFTER )
 
@@ -262,19 +268,19 @@ class MongoUserDict( UserDict ):
 
         # on any error roll back _updated and _created to the original value or remove if we added them
         except Exception as e:
-            if addedCreated:
+            if added_created:
                 del self['_created']
-            if addedUpdated:
+            if added_updated:
                 del self['_updated']
             else:
-                self['_updated'] = originalUpdated
+                self['_updated'] = original_updated
             raise(e)
 
 
     @classmethod
-    def splitId( cls, subdocId ):
+    def split_id( cls, subdoc_id ):
         '''Split a subdocument ID into its component document ID and one or more subdocument keys.'''
-        return subdocId.split( cls.subdocKeySep )
+        return subdoc_id.split( cls.subdoc_key_sep )
 
 
     @staticmethod
@@ -289,19 +295,19 @@ class MongoUserDict( UserDict ):
 class PolymorphicMongoUserDict( MongoUserDict ):
     '''Like MongoUserDict but supports polymorphic document objects within the same collection.
 
-    Each subclass needs to define a unique subclassKey'''
+    Each subclass needs to define a unique subclass_key'''
 
-    # Map subclassKeys to subclasses
+    # Map subclass_keys to subclasses
     # Override this with an empty dictionary in the base class
     # of your subclass tree to create a separate namespace
-    subclassMap = {}
+    subclass_map = {}
 
     # Must be unique and non-None for each subclass
     # Base classes may define this key as well
-    subclassKey = None
+    subclass_key = None
 
-    # Name of internal key added to each document to record the subclassKey
-    subclassKeyName = '_sckey'
+    # Name of internal key added to each document to record the subclass_key
+    subclass_key_name = '_sckey'
 
 
 
@@ -310,9 +316,9 @@ class PolymorphicMongoUserDict( MongoUserDict ):
         '''auto-register every PolymorphicMongoUserDict subclass'''
         super().__init_subclass__(**kwargs)
         try:
-            if getattr( cls, 'subclassKey', None ) is not None:
-                assert cls.subclassKey not in cls.subclassMap, f"duplicate subclassKey for {type(cls)}"
-                cls.subclassMap[ cls.subclassKey ] = cls
+            if getattr( cls, 'subclass_key', None ) is not None:
+                assert cls.subclass_key not in cls.subclass_map, f"duplicate subclass_key for {type(cls)}"
+                cls.subclass_map[ cls.subclass_key ] = cls
         except Exception as e:
             raise Exception( 'PolymorphicMongoUserDict(): unable to register subclass' ) from e
 
@@ -335,7 +341,7 @@ class PolymorphicMongoUserDict( MongoUserDict ):
 
 
     @classmethod
-    def find_one( cls, filter={}, projection=None, readonly=False, noMatch=None, **kwargs ):
+    def find_one( cls, filter={}, projection=None, readonly=False, no_match=None, **kwargs ):
         '''Return a single matching document as the appropriate subclass or None'''
         # Authorize reading at all
         if not cls.authorize_pre_read():
@@ -350,22 +356,22 @@ class PolymorphicMongoUserDict( MongoUserDict ):
             # Authorize reading this particular document object before returning it
             if obj.authorize_read():
                 return obj
-        return noMatch
+        return no_match
 
 
     @classmethod
-    def getSubclassByKey( cls, subclassKey ):
-        '''Look up a subclass in the subclassMap by its subclassKey
+    def get_subclass_by_key( cls, subclass_key ):
+        '''Look up a subclass in the subclass_map by its subclass_key
         If the subclass can't be located, return the base class'''
-        return cls.subclassMap.get( subclassKey, cls )
+        return cls.subclass_map.get( subclass_key, cls )
 
 
     @classmethod
-    def getSubclassFromDoc( cls, doc ):
+    def get_subclass_from_doc( cls, doc ):
         '''Return the correct subclass to represent this document.
-        If the document doesn't contain a subclassKeyName value or the value
-        doesn't exist in the subclassMap, return the base class'''
-        return cls.getSubclassByKey( doc.get( cls.subclassKeyName ) )
+        If the document doesn't contain a subclass_key_name value or the value
+        doesn't exist in the subclass_map, return the base class'''
+        return cls.get_subclass_by_key( doc.get( cls.subclass_key_name ) )
 
 
     @classmethod
@@ -375,13 +381,13 @@ class PolymorphicMongoUserDict( MongoUserDict ):
         # Looks like a bug but isn't
         # The first function call determines the correct subclass
         # The second function call populates a new UserDict subclass with data from the document
-        return cls.getSubclassFromDoc( doc )( doc, readonly=readonly )
+        return cls.get_subclass_from_doc( doc )( doc, readonly=readonly )
 
 
     def save( self, force=False ):
-        '''Add the subclassKey and save the document'''
-        if self.subclassKey is not None:
-            self[ self.subclassKeyName ] = self.subclassKey
+        '''Add the subclass_key and save the document'''
+        if self.subclass_key is not None:
+            self[ self.subclass_key_name ] = self.subclass_key
         return super().save( force=force )
 
 
@@ -395,65 +401,65 @@ class MongoBaseProxy( object ):
     '''Intended for interal use. Base of all other proxy objects'''
 
     # Users must override this to provide the name of the dictionary or list container
-    containerName = None
+    container_name = None
 
 
     def __contains__( self, key ):
-        return key in self.getSubdoc()
+        return key in self.get_subdoc()
 
 
     def __delitem__( self, key ):
-        del self.getSubdoc()[ key ]
+        del self.get_subdoc()[ key ]
 
 
     def __getitem__( self, key ):
-        return self.getSubdoc()[ key ]
+        return self.get_subdoc()[ key ]
 
 
     def __iter__( self ):
-        return iter( self.getSubdoc().keys() )
+        return iter( self.get_subdoc().keys() )
 
 
     def __setitem__( self, key, value ):
-        self.getSubdoc()[ key ] = value
+        self.get_subdoc()[ key ] = value
 
 
     @classmethod
-    def createKey( cls, parent ):
+    def create_key( cls, parent ):
         '''Create a unique key value for this subdocument.
         The default implementation requests a hex string for the next unique integer
         as saved in the ultimate MongoUserDict parent object.
         Users may override this using data from the subdoc or other methods to generate a unique key.'''
-        return getattr( parent, 'ultimateParent', parent ).getUniqueKey( autosave=False )
+        return getattr( parent, 'ultimate_parent', parent ).get_unique_key( autosave=False )
 
 
     def data( self ):
         '''Convenience function to behave similar to UserDict'''
-        return self.getSubdoc()
+        return self.get_subdoc()
 
 
     def get( self, key, default=None ):
-        return self.getSubdoc().get( key, default )
+        return self.get_subdoc().get( key, default )
 
 
     def id( self ):
-        return f"{self.parent.id()}{self.ultimateParent.subdocKeySep}{self.key}"
+        return f"{self.parent.id()}{self.ultimate_parent.subdoc_key_sep}{self.key}"
 
 
     def items( self ):
-        return self.getSubdoc().items()
+        return self.get_subdoc().items()
 
 
     def keys( self ):
-        return self.getSubdoc().keys()
+        return self.get_subdoc().keys()
 
 
     def setdefault( self, key, default=None ):
-        return self.getSubdoc().setdefault( key, default )
+        return self.get_subdoc().setdefault( key, default )
 
 
     def update( self, values ):
-        self.getSubdoc().update( values )
+        self.get_subdoc().update( values )
 
 
     def save( self ):
@@ -461,7 +467,7 @@ class MongoBaseProxy( object ):
 
 
     def values( self ):
-        return self.getSubdoc().values()
+        return self.get_subdoc().values()
 
 
 
@@ -469,21 +475,21 @@ class MongoBaseProxy( object ):
 class PolymorphicMongoBaseProxy( MongoBaseProxy ):
     '''Like MongoBaseProxy but supports polymorphic subdocument objects within the same parent document.
 
-    Each subclass needs to define a unique proxySubclassKey
+    Each subclass needs to define a unique proxy_subclass_key
 
     Parent objects need to call instantiate() to create the correct subclass type'''
 
-    # Map proxySubclassKeys to subclasses
+    # Map proxy_subclass_keys to subclasses
     # Override this with an empty dictionary in the base class
     # of your subclass tree to create a separate namespace
-    proxySubclassMap = {}
+    proxy_subclass_map = {}
 
     # Must be unique and non-None for each subclass
     # Base classes may define this key as well
-    proxySubclassKey = None
+    proxy_subclass_key = None
 
-    # Name of internal key added to each subdocument to record the proxySubclassKey
-    proxySubclassKeyName = '_psckey'
+    # Name of internal key added to each subdocument to record the proxy_subclass_key
+    proxy_subclass_key_name = '_psckey'
 
 
     @classmethod
@@ -491,34 +497,34 @@ class PolymorphicMongoBaseProxy( MongoBaseProxy ):
         '''auto-register every PolymorphicMongoBaseProxy subclass'''
         super().__init_subclass__(**kwargs)
         try:
-            if getattr( cls, 'proxySubclassKey', None ) is not None:
-                assert cls.proxySubclassKey not in cls.proxySubclassMap, f"duplicate proxySubclassKey for {type(cls)}"
-                cls.proxySubclassMap[ cls.proxySubclassKey ] = cls
+            if getattr( cls, 'proxy_subclass_key', None ) is not None:
+                assert cls.proxy_subclass_key not in cls.proxy_subclass_map, f"duplicate proxy_subclass_key for {type(cls)}"
+                cls.proxy_subclass_map[ cls.proxy_subclass_key ] = cls
         except Exception as e:
             raise Exception( 'PolymorphicMongoBaseProxy(): unable to register subclass' ) from e
 
 
     @classmethod
     def create( cls, parent, subdoc={}, autosave=True ):
-        '''Add the proxySubclassKey before passing to the base class create()'''
-        if cls.proxySubclassKey is not None:
-            subdoc[ cls.proxySubclassKeyName ] = cls.proxySubclassKey
+        '''Add the proxy_subclass_key before passing to the base class create()'''
+        if cls.proxy_subclass_key is not None:
+            subdoc[ cls.proxy_subclass_key_name ] = cls.proxy_subclass_key
         return super().create( parent, subdoc, autosave=autosave )
 
 
     @classmethod
-    def getSubclassByKey( cls, proxySubclassKey ):
-        '''Look up a proxySubclass in the proxySubclassMap by its proxySubclassKey
+    def get_subclass_by_key( cls, proxy_subclass_key ):
+        '''Look up a proxy_subclass in the proxy_subclass_map by its proxy_subclass_key
         If the subclass can't be located, return the called class'''
-        return cls.proxySubclassMap.get( proxySubclassKey, cls )
+        return cls.proxy_subclass_map.get( proxy_subclass_key, cls )
 
 
     @classmethod
-    def getSubclassFromDoc( cls, doc ):
+    def get_subclass_from_doc( cls, doc ):
         '''Return the correct subclass to represent this document.
-        If the document doesn't contain a proxySubclassKeyName value or the value
-        doesn't exist in the proxySubclassMap, return the base class'''
-        return cls.getSubclassByKey( doc.get( cls.proxySubclassKeyName ) )
+        If the document doesn't contain a proxy_subclass_key_name value or the value
+        doesn't exist in the proxy_subclass_map, return the base class'''
+        return cls.get_subclass_by_key( doc.get( cls.proxy_subclass_key_name ) )
 
 
 
@@ -531,17 +537,17 @@ class AccessDictProxy( object ):
 
     Keys must be strings as required by MongoDB documents.
 
-    MongoUserDict.getUniqueKey() is a convenient way to generate unique keys
+    MongoUserDict.get_unique_key() is a convenient way to generate unique keys
     within a MongoDB document.
     '''
 
     def __init__( self, parent, key ):
         self.parent = parent
-        self.ultimateParent = getattr( parent, 'ultimateParent', parent )
+        self.ultimate_parent = getattr( parent, 'ultimate_parent', parent )
         self.key = str(key)
 
         # make sure this key actually exists before we return successfully
-        assert self.key in self.getSubdocContainer()
+        assert self.key in self.get_subdoc_container()
 
 
     @classmethod
@@ -549,13 +555,13 @@ class AccessDictProxy( object ):
         '''Add a new subdocument to the container.
         Auto-assign the ID
         Return the new proxy object'''
-        key = cls.createKey( parent )
+        key = cls.create_key( parent )
 
         # insure the container exists before adding the document
-        parent.setdefault( cls.containerName, {} )[ key ] = subdoc
+        parent.setdefault( cls.container_name, {} )[ key ] = subdoc
         if autosave:
             parent.save()
-        return cls.getProxy( parent, key )
+        return cls.get_proxy( parent, key )
 
 
 
@@ -563,23 +569,23 @@ class AccessDictProxy( object ):
         '''Delete the subdocument from the container dictionary.
         Remove the key so the proxy can't be referenced again.
         By default save the parent document'''
-        del self.getSubdocContainer()[ self.key ]
+        del self.get_subdoc_container()[ self.key ]
         if autosave:
             self.parent.save()
         self.key = None
 
 
     @classmethod
-    def getProxies( cls, parent ):
-        return [ cls.getProxy( parent, key ) for key in parent.get( cls.containerName, {} ).keys() ]
+    def get_proxies( cls, parent ):
+        return [ cls.get_proxy( parent, key ) for key in parent.get( cls.container_name, {} ).keys() ]
 
 
-    def getSubdoc( self ):
-        return self.getSubdocContainer()[ self.key ]
+    def get_subdoc( self ):
+        return self.get_subdoc_container()[ self.key ]
 
 
-    def getSubdocContainer( self ):
-        return self.parent.get( self.containerName, {} )
+    def get_subdoc_container( self ):
+        return self.parent.get( self.container_name, {} )
 
 
 
@@ -588,7 +594,7 @@ class MongoDictProxy( MongoBaseProxy, AccessDictProxy ):
     '''Implement proxy object using a dictionary as a container'''
 
     @classmethod
-    def getProxy( cls, parent, key ):
+    def get_proxy( cls, parent, key ):
         '''Return a single proxy object. For non-polymorphic use,
         this simply calls __init__()'''
         return cls( parent, key )
@@ -600,14 +606,14 @@ class PolymorphicMongoDictProxy( PolymorphicMongoBaseProxy, AccessDictProxy ):
     '''Polymorphic version of MongoDictProxy'''
 
     @classmethod
-    def getProxy( cls, parent, key ):
+    def get_proxy( cls, parent, key ):
         '''Return a single proxy object. For PolymorphicMongoDictProxy,
         determine the correct subclass type and call __init__()'''
         # use an anonymous base-class proxy to get access to the subdocument
-        # so that getSubclassFromDoc can inspect the data and determine the
+        # so that get_subclass_from_doc can inspect the data and determine the
         # appropriate subclass.
         # Return a separate proxy object with that class
-        return cls.getSubclassFromDoc( cls( parent, key ) )( parent, key )
+        return cls.get_subclass_from_doc( cls( parent, key ) )( parent, key )
 
 
 
@@ -621,7 +627,7 @@ class AccessListProxy( object ):
     Since the container object is a list, not a dictionary, we can't use the key
     to look up items directly.
 
-    Instead, we use getKey() to extract a key from a subdocument
+    Instead, we use get_key() to extract a key from a subdocument
     and use the result to determine if a given document matches.
 
     For convenience, if no key is given but a sequence provided, we initialize the key from
@@ -629,19 +635,19 @@ class AccessListProxy( object ):
 
     # The name of the internal key added to each subdoc to store the unique subdocument "key" value
     # Subclasses may override this name or
-    # override getKey() and setKey() to implement their own mechanism of locating subdocuments
-    subdocKeyName = '_sdkey'
+    # override get_key() and set_key() to implement their own mechanism of locating subdocuments
+    subdoc_key_name = '_sdkey'
 
 
     def __init__( self, parent, key=None, seq=None ):
         self.parent = parent
-        self.ultimateParent = getattr( parent, 'ultimateParent', parent )
+        self.ultimate_parent = getattr( parent, 'ultimate_parent', parent )
 
         if key is not None:
             self.key = key
             self.seq = seq
         elif seq is not None:
-            self.key = self.getKey( self.getSubdocContainer()[ seq ] )
+            self.key = self.get_key( self.get_subdoc_container()[ seq ] )
             self.seq = seq
         else:
             raise Exception( "MongoListProxy(): key or seq must be provided" )
@@ -654,13 +660,13 @@ class AccessListProxy( object ):
         Return the new proxy object.
         '''
         # Create a unique key for this subdocument
-        key = cls.createKey( parent )
+        key = cls.create_key( parent )
 
         # Add the key to the subdocument
-        cls.setKey( subdoc, key )
+        cls.set_key( subdoc, key )
 
         # Append the new subdocument to the list
-        container = parent.setdefault( cls.containerName, [] )
+        container = parent.setdefault( cls.container_name, [] )
         container.append( subdoc )
 
         # Save if requested
@@ -669,7 +675,7 @@ class AccessListProxy( object ):
 
         # Since we know we just appended to the end of the list, provide
         # the sequence as well as the key
-        return cls.getProxy( parent, key, len( container ) - 1 )
+        return cls.get_proxy( parent, key, len( container ) - 1 )
 
 
     def delete( self, autosave=True ):
@@ -679,50 +685,50 @@ class AccessListProxy( object ):
         '''
 
         # First make sure the sequence number is accurate
-        self.getSubdoc()
+        self.get_subdoc()
         # Then pop that item from the list
-        self.getSubdocContainer().pop( self.seq )
+        self.get_subdoc_container().pop( self.seq )
         if autosave:
             self.parent.save()
         self.key = self.seq = None
 
 
     @classmethod
-    def getKey( cls, subdoc ):
+    def get_key( cls, subdoc ):
         '''Extract the key from a subdocument dictionary.'''
-        return subdoc[ cls.subdocKeyName ]
+        return subdoc[ cls.subdoc_key_name ]
 
 
     @classmethod
-    def getProxies( cls, parent ):
-        return [ cls.getProxy( parent, seq=seq ) for seq in range( len( parent.get( cls.containerName, [] ) ) ) ]
+    def get_proxies( cls, parent ):
+        return [ cls.get_proxy( parent, seq=seq ) for seq in range( len( parent.get( cls.container_name, [] ) ) ) ]
 
 
-    def getSubdoc( self ):
+    def get_subdoc( self ):
         # We don't want to iterate the list each time looking for the subdoc that matches
         # EAFTP: If the document at self.seq is a match, return it
         # Otherwise, scan the list for a match.
         # Since __init__() sets self.seq to None, the item will automatically be located on first use
         try:
-            subdoc = self.getSubdocContainer()[ self.seq ]
-            assert self.key == self.getKey( subdoc )
+            subdoc = self.get_subdoc_container()[ self.seq ]
+            assert self.key == self.get_key( subdoc )
             return subdoc
         except:
-            for (seq, subdoc) in enumerate( self.getSubdocContainer() ):
-                if self.key == self.getKey( subdoc ):
+            for (seq, subdoc) in enumerate( self.get_subdoc_container() ):
+                if self.key == self.get_key( subdoc ):
                     self.seq = seq
                     return subdoc
-            raise Exception( "MongoListProxy.getSubdoc(): no match found" )
+            raise Exception( "MongoListProxy.get_subdoc(): no match found" )
 
 
-    def getSubdocContainer( self ):
-        return self.parent.get( self.containerName, [] )
+    def get_subdoc_container( self ):
+        return self.parent.get( self.container_name, [] )
 
 
     @classmethod
-    def setKey( cls, subdoc, key ):
+    def set_key( cls, subdoc, key ):
         '''Set the key in a subdocument dictionary.'''
-        subdoc[ cls.subdocKeyName ] = key
+        subdoc[ cls.subdoc_key_name ] = key
 
 
 
@@ -731,7 +737,7 @@ class MongoListProxy( MongoBaseProxy, AccessListProxy ):
     '''Implement proxy object using a list as a container'''
 
     @classmethod
-    def getProxy( cls, parent, key=None, seq=None ):
+    def get_proxy( cls, parent, key=None, seq=None ):
         '''Return a single proxy object. For non-polymorphic use,
         this simply calls __init__()'''
         return cls( parent, key, seq )
@@ -743,14 +749,14 @@ class PolymorphicMongoListProxy( PolymorphicMongoBaseProxy, AccessListProxy ):
     '''Polymorphic version of MongoListProxy'''
 
     @classmethod
-    def getProxy( cls, parent, key=None, seq=None ):
+    def get_proxy( cls, parent, key=None, seq=None ):
         '''Return a single proxy object. For PolymorphicMongoDictProxy,
         determine the correct subclass type and call __init__()'''
         # use an anonymous base-class proxy to get access to the subdocument
-        # so that getSubclassFromDoc can inspect the data and determine the
+        # so that get_subclass_from_doc can inspect the data and determine the
         # appropriate subclass.
         # Return a separate proxy object with that class
-        return cls.getSubclassFromDoc( cls( parent, key, seq ) )( parent, key, seq )
+        return cls.get_subclass_from_doc( cls( parent, key, seq ) )( parent, key, seq )
 
 
 
@@ -770,27 +776,27 @@ class AccessSingleProxy( AccessDictProxy ):
     def create( cls, parent, subdoc={}, key=None, autosave=True ):
         '''Add a new single subdocument dictionary to the parent object.
         No new key is auto-assigned as single subdocuments are assigned to fixed keys.
-        The key can be defined in the class as "containerName"
+        The key can be defined in the class as "container_name"
         or overriden on the command line as "key".
         Return the new proxy object.
         '''
         if key is None:
-            key = cls.containerName
+            key = cls.container_name
         parent[ key ] = subdoc
         if autosave:
             parent.save()
-        return cls.getProxy( parent, key )
+        return cls.get_proxy( parent, key )
 
 
     @classmethod
-    def getProxies( cls, parent ):
-        '''getProxies() doesn't make sense for single proxy use.
+    def get_proxies( cls, parent ):
+        '''get_proxies() doesn't make sense for single proxy use.
         This is a class method and we don't know the key, so
         we don't know which of the parent's subdocuments to return'''
-        raise Exception( 'single proxy objects do not support getProxies()' )
+        raise Exception( 'single proxy objects do not support get_proxies()' )
 
 
-    def getSubdocContainer( self ):
+    def get_subdoc_container( self ):
         '''For a single subdocument dictionary, the container is the parent document.'''
         return self.parent
 
@@ -799,7 +805,7 @@ class AccessSingleProxy( AccessDictProxy ):
         '''Force the subdocument ID for single proxies to "0". We
         can't use the actual key as we risk exposing the actual
         dictionary key name.'''
-        return f"{self.parent.id()}{self.ultimateParent.subdocKeySep}0"
+        return f"{self.parent.id()}{self.ultimate_parent.subdoc_key_sep}0"
 
 
 
@@ -810,11 +816,11 @@ class MongoSingleProxy( AccessSingleProxy, MongoBaseProxy ):
     '''Implement proxy object for a single subdocument dictionary'''
 
     @classmethod
-    def getProxy( cls, parent, key=None ):
+    def get_proxy( cls, parent, key=None ):
         '''Return a single proxy object. For non-polymorphic use,
         this simply calls __init__()'''
         if key is None:
-            key = cls.containerName
+            key = cls.container_name
         return cls( parent, key )
 
 
@@ -825,25 +831,25 @@ class PolymorphicMongoSingleProxy( AccessSingleProxy, PolymorphicMongoBaseProxy 
 
     @classmethod
     def create( cls, parent, subdoc={}, key=None, autosave=True ):
-        '''Add the proxySubclassKey before passing to the base class create()
+        '''Add the proxy_subclass_key before passing to the base class create()
         AccessSingleProxy needs to be first in the object inheritance to get
         super() to work properly'''
-        if cls.proxySubclassKey is not None:
-            subdoc[ cls.proxySubclassKeyName ] = cls.proxySubclassKey
+        if cls.proxy_subclass_key is not None:
+            subdoc[ cls.proxy_subclass_key_name ] = cls.proxy_subclass_key
         return super().create( parent, subdoc, key=key, autosave=autosave )
 
 
     @classmethod
-    def getProxy( cls, parent, key=None ):
+    def get_proxy( cls, parent, key=None ):
         '''Return a single proxy object. For PolymorphicMongoDictProxy,
         determine the correct subclass type and call __init__()'''
         # use an anonymous base-class proxy to get access to the subdocument
-        # so that getSubclassFromDoc can inspect the data and determine the
+        # so that get_subclass_from_doc can inspect the data and determine the
         # appropriate subclass.
         # Return a separate proxy object with that class
         if key is None:
-            key = cls.containerName
-        return cls.getSubclassFromDoc( cls( parent, key ) )( parent, key )
+            key = cls.container_name
+        return cls.get_subclass_from_doc( cls( parent, key ) )( parent, key )
 
 
 

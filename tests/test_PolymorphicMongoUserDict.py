@@ -37,13 +37,13 @@ def getMPMUDClasses( mongo_db ):
         database = mongo_db
 
     class MyPolymorphicMongoUserDictA( MyPolymorphicMongoUserDictBase ):
-        subclassKey = 'A'
+        subclass_key = 'A'
 
     class MyPolymorphicMongoUserDictB( MyPolymorphicMongoUserDictBase ):
-        subclassKey = 'B'
+        subclass_key = 'B'
 
     class MyPolymorphicMongoUserDictC( MyPolymorphicMongoUserDictBase ):
-        subclassKey = 'C'
+        subclass_key = 'C'
 
     return {
         'base' : MyPolymorphicMongoUserDictBase,
@@ -77,26 +77,26 @@ class TestInitSubclass:
     def test_init_subclass( self ):
         class MyTestClassBase( mongo_objects.PolymorphicMongoUserDict ):
             # create our own local testing namespace
-            subclassMap = {}
+            subclass_map = {}
 
         class MyTestSubclassA( MyTestClassBase ):
-            subclassKey = 'A'
+            subclass_key = 'A'
 
         class MyTestSubclassB( MyTestClassBase ):
-            subclassKey = 'B'
+            subclass_key = 'B'
 
         class MyTestSubclassC( MyTestClassBase ):
             pass
 
         # Verify that classes A and B were added to the map
-        # Class C should be skipped because it doesn't have a non-None subclassKey
-        assert MyTestClassBase.subclassMap == {
+        # Class C should be skipped because it doesn't have a non-None subclass_key
+        assert MyTestClassBase.subclass_map == {
             'A' : MyTestSubclassA,
             'B' : MyTestSubclassB
         }
 
         # verify our local subclass map namespace didn't affect the module base class map
-        assert len( mongo_objects.PolymorphicMongoUserDict.subclassMap ) == 0
+        assert len( mongo_objects.PolymorphicMongoUserDict.subclass_map ) == 0
 
 
     def test_init_subclass_duplicate_key( self ):
@@ -104,23 +104,23 @@ class TestInitSubclass:
 
             class MyTestClassBase( mongo_objects.PolymorphicMongoUserDict ):
                 # create our own local testing namespace
-                subclassMap = {}
+                subclass_map = {}
 
             class MyTestSubclassA( MyTestClassBase ):
-                subclassKey = 'A'
+                subclass_key = 'A'
 
             class MyTestSubclassAnotherA( MyTestClassBase ):
-                subclassKey = 'A'
+                subclass_key = 'A'
 
 
 
 class TestPolymorphicBasics:
-    def test_subclassMap( self , getPopulatedMPMUDClasses ):
-        '''getMPMUDClasses doesn't create a new subclassMap namespace
-        Verify that our base class and the module base class subclassMaps are the same'''
+    def test_subclass_map( self , getPopulatedMPMUDClasses ):
+        '''getMPMUDClasses doesn't create a new subclass_map namespace
+        Verify that our base class and the module base class subclass_maps are the same'''
         classes = getPopulatedMPMUDClasses
-        assert len( classes['base'].subclassMap ) == 3
-        assert classes['base'].subclassMap == mongo_objects.PolymorphicMongoUserDict.subclassMap
+        assert len( classes['base'].subclass_map ) == 3
+        assert classes['base'].subclass_map == mongo_objects.PolymorphicMongoUserDict.subclass_map
 
 
     def test_find_all( self, getPopulatedMPMUDClasses ):
@@ -257,13 +257,13 @@ class TestPolymorphicBasics:
 
 
     def test_find_one_none_custom_return( self, getPopulatedMPMUDClasses ):
-        '''Verify a non-matching filter produces our custom "noMatch" result'''
+        '''Verify a non-matching filter produces our custom "no_match" result'''
         classes = getPopulatedMPMUDClasses
 
         class EmptyResponse( object ):
             pass
 
-        obj = classes['base'].find_one( { 'not-a-match' : 'will not return data'}, noMatch=EmptyResponse() )
+        obj = classes['base'].find_one( { 'not-a-match' : 'will not return data'}, no_match=EmptyResponse() )
 
         assert isinstance( obj, EmptyResponse )
 
@@ -334,14 +334,14 @@ class TestPolymorphicBasics:
         assert obj.readonly is False
 
 
-    def test_getSubclassByKey( self, getMPMUDClasses ):
+    def test_get_subclass_by_key( self, getMPMUDClasses ):
         classes = getMPMUDClasses
-        assert classes['base'].getSubclassByKey( 'A' ) == classes['A']
+        assert classes['base'].get_subclass_by_key( 'A' ) == classes['A']
 
 
-    def test_getSubclassFromDoc( self, getMPMUDClasses ):
+    def test_get_subclass_from_doc( self, getMPMUDClasses ):
         classes = getMPMUDClasses
-        assert classes['base'].getSubclassFromDoc( { classes['base'].subclassKeyName : 'A' } ) == classes['A']
+        assert classes['base'].get_subclass_from_doc( { classes['base'].subclass_key_name : 'A' } ) == classes['A']
 
 
     def test_instantiate_readonly( self, getPopulatedMPMUDClasses ):
@@ -351,7 +351,7 @@ class TestPolymorphicBasics:
         assert obj.readonly is True
 
 
-    def test_loadProxyById( self, getPopulatedMPMUDClasses ):
+    def test_load_proxy_by_id( self, getPopulatedMPMUDClasses ):
         '''Verify find_one() readonly flag'''
         classes = getPopulatedMPMUDClasses
 
@@ -359,7 +359,7 @@ class TestPolymorphicBasics:
         for source in classes['base'].find():
 
             # load the same object with an empty proxy tree
-            result = classes['base'].loadProxyById( source.id() )
+            result = classes['base'].load_proxy_by_id( source.id() )
 
             # verify that the type of the object is correct
             assert type(source) == type(result)
@@ -371,7 +371,7 @@ class TestPolymorphicBasics:
             assert result.readonly is False
 
 
-    def test_loadProxyById( self, getPopulatedMPMUDClasses ):
+    def test_load_proxy_by_id( self, getPopulatedMPMUDClasses ):
         '''Verify find_one() readonly flag'''
         classes = getPopulatedMPMUDClasses
 
@@ -379,7 +379,7 @@ class TestPolymorphicBasics:
         for source in classes['base'].find():
 
             # load the same object with an empty proxy tree
-            result = classes['base'].loadProxyById( source.id(), readonly=True )
+            result = classes['base'].load_proxy_by_id( source.id(), readonly=True )
 
             # verify that the type of the object is correct
             assert type(source) == type(result)

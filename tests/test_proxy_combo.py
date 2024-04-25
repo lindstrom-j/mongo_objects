@@ -31,13 +31,13 @@ class TestDictAsPrimary:
 
         # create one class of each proxy type
         class MyMongoDictProxyA( mongo_objects.MongoDictProxy ):
-            containerName = 'proxyA'
+            container_name = 'proxyA'
 
         class MyMongoListProxyA1( mongo_objects.MongoListProxy ):
-            containerName = 'proxyA1'
+            container_name = 'proxyA1'
 
         class MyMongoSingleProxyA2( mongo_objects.MongoSingleProxy ):
-            containerName = 'proxyA2'
+            container_name = 'proxyA2'
 
         # create an empty object
         obj = getMMUDBaseClass()
@@ -68,17 +68,17 @@ class TestDictAsPrimary:
         obj.save()
 
         # reload the data from the database into a new object
-        obj2 = getMMUDBaseClass.loadById( obj['_id'] )
+        obj2 = getMMUDBaseClass.load_by_id( obj['_id'] )
 
         # check that all first-level proxy entries are present
-        assert sorted( [ x['name'] for x in MyMongoDictProxyA.getProxies( obj2 ) ] ) == \
+        assert sorted( [ x['name'] for x in MyMongoDictProxyA.get_proxies( obj2 ) ] ) == \
                 [ 'proxyA-0', 'proxyA-1', 'proxyA-2' ]
 
         # loop through each first-level proxy and check the second-level entries
-        for proxyA in MyMongoDictProxyA.getProxies( obj2 ):
-            assert sorted( [ x['name'] for x in MyMongoListProxyA1.getProxies( proxyA ) ] ) == \
+        for proxyA in MyMongoDictProxyA.get_proxies( obj2 ):
+            assert sorted( [ x['name'] for x in MyMongoListProxyA1.get_proxies( proxyA ) ] ) == \
                     [ 'proxyA1-0', 'proxyA1-1', 'proxyA1-2' ]
-            assert MyMongoSingleProxyA2.getProxy( proxyA )['name'] == "proxyA2"
+            assert MyMongoSingleProxyA2.get_proxy( proxyA )['name'] == "proxyA2"
 
 
 
@@ -88,13 +88,13 @@ class TestListAsPrimary:
 
         # create one class of each proxy type
         class MyMongoListProxyA( mongo_objects.MongoListProxy ):
-            containerName = 'proxyA'
+            container_name = 'proxyA'
 
         class MyMongoDictProxyA1( mongo_objects.MongoDictProxy ):
-            containerName = 'proxyA1'
+            container_name = 'proxyA1'
 
         class MyMongoSingleProxyA2( mongo_objects.MongoSingleProxy ):
-            containerName = 'proxyA2'
+            container_name = 'proxyA2'
 
         # create an empty object
         obj = getMMUDBaseClass()
@@ -125,17 +125,17 @@ class TestListAsPrimary:
         obj.save()
 
         # reload the data from the database into a new object
-        obj2 = getMMUDBaseClass.loadById( obj['_id'] )
+        obj2 = getMMUDBaseClass.load_by_id( obj['_id'] )
 
         # check that all first-level proxy entries are present
-        assert sorted( [ x['name'] for x in MyMongoListProxyA.getProxies( obj2 ) ] ) == \
+        assert sorted( [ x['name'] for x in MyMongoListProxyA.get_proxies( obj2 ) ] ) == \
                 [ 'proxyA-0', 'proxyA-1', 'proxyA-2' ]
 
         # loop through each first-level proxy and check the second-level entries
-        for proxyA in MyMongoListProxyA.getProxies( obj2 ):
-            assert sorted( [ x['name'] for x in MyMongoDictProxyA1.getProxies( proxyA ) ] ) == \
+        for proxyA in MyMongoListProxyA.get_proxies( obj2 ):
+            assert sorted( [ x['name'] for x in MyMongoDictProxyA1.get_proxies( proxyA ) ] ) == \
                     [ 'proxyA1-0', 'proxyA1-1', 'proxyA1-2' ]
-            assert MyMongoSingleProxyA2.getProxy( proxyA )['name'] == "proxyA2"
+            assert MyMongoSingleProxyA2.get_proxy( proxyA )['name'] == "proxyA2"
 
 
 
@@ -145,13 +145,13 @@ class TestSingleAsPrimary:
 
         # create one class of each proxy type
         class MyMongoSingleProxyA( mongo_objects.MongoSingleProxy ):
-            containerName = 'proxyA2'
+            container_name = 'proxyA2'
 
         class MyMongoDictProxyA1( mongo_objects.MongoDictProxy ):
-            containerName = 'proxyA1'
+            container_name = 'proxyA1'
 
         class MyMongoListProxyA2( mongo_objects.MongoListProxy ):
-            containerName = 'proxyA2'
+            container_name = 'proxyA2'
 
 
         # create an empty object
@@ -181,16 +181,16 @@ class TestSingleAsPrimary:
         obj.save()
 
         # reload the data from the database into a new object
-        obj2 = getMMUDBaseClass.loadById( obj['_id'] )
+        obj2 = getMMUDBaseClass.load_by_id( obj['_id'] )
 
         # check that the first-level proxy entry is present
-        proxyA = MyMongoSingleProxyA.getProxy( obj2 )
+        proxyA = MyMongoSingleProxyA.get_proxy( obj2 )
         assert proxyA['name'] == "proxyA"
 
         # loop check the second-level entries
-        assert sorted( [ x['name'] for x in MyMongoDictProxyA1.getProxies( proxyA ) ] ) == \
+        assert sorted( [ x['name'] for x in MyMongoDictProxyA1.get_proxies( proxyA ) ] ) == \
                 [ 'proxyA1-0', 'proxyA1-1', 'proxyA1-2' ]
-        assert sorted( [ x['name'] for x in MyMongoListProxyA2.getProxies( proxyA ) ] ) == \
+        assert sorted( [ x['name'] for x in MyMongoListProxyA2.get_proxies( proxyA ) ] ) == \
                 [ 'proxyA2-0', 'proxyA2-1', 'proxyA2-2' ]
 
 

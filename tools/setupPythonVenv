@@ -11,14 +11,14 @@ VENV_DIR=${PROJECT_DIR}/venv
 # check the virtual environment version on MacOS
 if [[ "$(uname)" == "Darwin" ]]; then
 
-    # Make sure Homebrew Python 3.11 is installed
-    if [[ ! -e /usr/local/bin/python3.11 ]]; then
-        echo "Python 3.11 is not installed"
+    # Make sure Homebrew Python 3.12 is installed
+    if [[ ! -e /usr/local/bin/python3.12 ]]; then
+        echo "Python 3.12 is not installed"
         exit 1
     fi
 
-    # If the virtual environment exists, make sure the Python 3.11 version matches
-    if [[ -d ${VENV_DIR} && "$(/usr/local/bin/python3.11 -V)" != "$(${VENV_DIR}/bin/python3 -V)" ]]; then
+    # If the virtual environment exists, make sure the Python 3.12 version matches
+    if [[ -d ${VENV_DIR} && "$(/usr/local/bin/python3.12 -V)" != "$(${VENV_DIR}/bin/python3 -V)" ]]; then
         echo Removing obsolete $(${VENV_DIR}/bin/python3 -V) virtual environment
         rm -rf ${VENV_DIR}
     fi
@@ -29,7 +29,7 @@ fi
 if [[ ! -d ${VENV_DIR} ]]; then
     # only implemented for MacOS
     if [[ "$(uname)" == "Darwin" ]]; then
-        /usr/local/bin/python3.11 -m venv ${VENV_DIR} --prompt "${PROJECT_NAME}-dev"
+        /usr/local/bin/python3.12 -m venv ${VENV_DIR} --prompt "${PROJECT_NAME}-dev"
         echo initialized virtual environment ${VENV_DIR}
     fi
 fi

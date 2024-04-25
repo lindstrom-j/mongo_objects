@@ -16,59 +16,59 @@ import secrets
 def getMPMUDClasses( mongo_db ):
     '''Return a set of polymorphic MongoUserDict classes configured for a per-test-class unique collection
 
-    Since each class is only used once per object, we can predefine the containerName'''
+    Since each class is only used once per object, we can predefine the container_name'''
 
     class MyMongoUserDict( mongo_objects.MongoUserDict ):
         collection_name = secrets.token_hex(6)
         database = mongo_db
 
     class MyMongoSingleProxyA( mongo_objects.PolymorphicMongoSingleProxy ):
-        proxySubclassMap = {}
-        containerName = "proxyA-0"
+        proxy_subclass_map = {}
+        container_name = "proxyA-0"
 
     class MyMongoSingleProxyAa( MyMongoSingleProxyA ):
-        proxySubclassKey = 'Aa'
-        containerName = "proxyA-1"
+        proxy_subclass_key = 'Aa'
+        container_name = "proxyA-1"
 
     class MyMongoSingleProxyAb( MyMongoSingleProxyA ):
-        proxySubclassKey = 'Ab'
-        containerName = "proxyA-2"
+        proxy_subclass_key = 'Ab'
+        container_name = "proxyA-2"
 
     class MyMongoSingleProxyAc( MyMongoSingleProxyA ):
-        proxySubclassKey = 'Ac'
-        containerName = "proxyA-3"
+        proxy_subclass_key = 'Ac'
+        container_name = "proxyA-3"
 
     class MyMongoSingleProxyA1( mongo_objects.PolymorphicMongoSingleProxy ):
-        proxySubclassMap = {}
-        containerName = "proxyA1-0"
+        proxy_subclass_map = {}
+        container_name = "proxyA1-0"
 
     class MyMongoSingleProxyA1a( MyMongoSingleProxyA1 ):
-        proxySubclassKey = 'A1a'
-        containerName = "proxyA1-1"
+        proxy_subclass_key = 'A1a'
+        container_name = "proxyA1-1"
 
     class MyMongoSingleProxyA1b( MyMongoSingleProxyA1 ):
-        proxySubclassKey = 'A1b'
-        containerName = "proxyA1-2"
+        proxy_subclass_key = 'A1b'
+        container_name = "proxyA1-2"
 
     class MyMongoSingleProxyA1c( MyMongoSingleProxyA1 ):
-        proxySubclassKey = 'A1c'
-        containerName = "proxyA1-3"
+        proxy_subclass_key = 'A1c'
+        container_name = "proxyA1-3"
 
     class MyMongoSingleProxyB( mongo_objects.PolymorphicMongoSingleProxy ):
-        proxySubclassMap = {}
-        containerName = "proxyB-0"
+        proxy_subclass_map = {}
+        container_name = "proxyB-0"
 
     class MyMongoSingleProxyBa( MyMongoSingleProxyB ):
-        proxySubclassKey = 'Ba'
-        containerName = "proxyB-1"
+        proxy_subclass_key = 'Ba'
+        container_name = "proxyB-1"
 
     class MyMongoSingleProxyBb( MyMongoSingleProxyB ):
-        proxySubclassKey = 'Bb'
-        containerName = "proxyB-2"
+        proxy_subclass_key = 'Bb'
+        container_name = "proxyB-2"
 
     class MyMongoSingleProxyBc( MyMongoSingleProxyB ):
-        proxySubclassKey = 'Bc'
-        containerName = "proxyB-3"
+        proxy_subclass_key = 'Bc'
+        container_name = "proxyB-3"
 
 
     return {
@@ -161,7 +161,7 @@ def getSampleProxyAKeys():
 @pytest.fixture( scope='class' )
 def getSampleProxyA( getPopulatedMPMUDClasses, getSampleParent, getSampleProxyAKey ):
     classes = getPopulatedMPMUDClasses
-    return classes['A'].getProxy( getSampleParent, getSampleProxyAKey )
+    return classes['A'].get_proxy( getSampleParent, getSampleProxyAKey )
 
 
 @pytest.fixture( scope='class' )
@@ -179,7 +179,7 @@ def getSampleProxyA1Keys():
 @pytest.fixture( scope='class' )
 def getSampleProxyA1( getPopulatedMPMUDClasses, getSampleProxyA, getSampleProxyA1Key ):
     classes = getPopulatedMPMUDClasses
-    return classes['A1'].getProxy( getSampleProxyA, getSampleProxyA1Key )
+    return classes['A1'].get_proxy( getSampleProxyA, getSampleProxyA1Key )
 
 
 
@@ -189,26 +189,26 @@ class TestInitSubclass:
     def test_init_subclass( self ):
         class MyTestClassBase( mongo_objects.PolymorphicMongoSingleProxy ):
             # create our own local testing namespace
-            proxySubclassMap = {}
+            proxy_subclass_map = {}
 
         class MyTestSubclassA( MyTestClassBase ):
-            proxySubclassKey = 'A'
+            proxy_subclass_key = 'A'
 
         class MyTestSubclassB( MyTestClassBase ):
-            proxySubclassKey = 'B'
+            proxy_subclass_key = 'B'
 
         class MyTestSubclassC( MyTestClassBase ):
             pass
 
         # Verify that classes A and B were added to the map
-        # Class C should be skipped because it doesn't have a non-None subclassKey
-        assert MyTestClassBase.proxySubclassMap == {
+        # Class C should be skipped because it doesn't have a non-None subclass_key
+        assert MyTestClassBase.proxy_subclass_map == {
             'A' : MyTestSubclassA,
             'B' : MyTestSubclassB
         }
 
         # verify our local subclass map namespace didn't affect the module base class map
-        assert len( mongo_objects.PolymorphicMongoBaseProxy.proxySubclassMap ) == 0
+        assert len( mongo_objects.PolymorphicMongoBaseProxy.proxy_subclass_map ) == 0
 
 
     def test_init_subclass_duplicate_key( self ):
@@ -216,13 +216,13 @@ class TestInitSubclass:
 
             class MyTestClassBase( mongo_objects.PolymorphicMongoSingleProxy ):
                 # create our own local testing namespace
-                proxySubclassMap = {}
+                proxy_subclass_map = {}
 
             class MyTestSubclassA( MyTestClassBase ):
-                proxySubclassKey = 'A'
+                proxy_subclass_key = 'A'
 
             class MyTestSubclassAnotherA( MyTestClassBase ):
-                proxySubclassKey = 'A'
+                proxy_subclass_key = 'A'
 
 
 
@@ -235,7 +235,7 @@ class TestCreate:
 
         # record current state
         original = dict( parent )
-        count = len( proxyA.getSubdocContainer().keys() )
+        count = len( proxyA.get_subdoc_container().keys() )
 
         # create a base class proxy object
         # Override the container name since there is already a proxyA at the default location
@@ -245,7 +245,7 @@ class TestCreate:
             key='newProxyA'
         )
 
-        # Since the base class does not define a proxySubclassKey, verify none was added to the record
+        # Since the base class does not define a proxy_subclass_key, verify none was added to the record
         assert '_psckey' not in newProxy
         assert isinstance( newProxy, classes['A'] )
 
@@ -259,7 +259,7 @@ class TestCreate:
             assert isinstance( newProxy, classes[key] )
 
         # verify four new entries created
-        assert len( proxyA.getSubdocContainer().keys() ) == count+4
+        assert len( proxyA.get_subdoc_container().keys() ) == count+4
 
         # confirm the parent document was saved
         assert parent['_updated'] > original['_updated']
@@ -273,7 +273,7 @@ class TestCreateNoSave:
 
         # record current state
         original = dict( parent )
-        count = len( proxyA.getSubdocContainer().keys() )
+        count = len( proxyA.get_subdoc_container().keys() )
 
         # create a base class proxy object
         newProxy = classes['A'].create( 
@@ -283,7 +283,7 @@ class TestCreateNoSave:
             autosave=False
         )
 
-        # Since the base class does not define a proxySubclassKey, verify none was added to the record
+        # Since the base class does not define a proxy_subclass_key, verify none was added to the record
         assert '_psckey' not in newProxy
         assert isinstance( newProxy, classes['A'] )
 
@@ -299,7 +299,7 @@ class TestCreateNoSave:
             assert isinstance( newProxy, classes[key] )
 
         # verify four new entries created
-        assert len( proxyA.getSubdocContainer().keys() ) == count+4
+        assert len( proxyA.get_subdoc_container().keys() ) == count+4
 
         # confirm the parent document was not saved
         assert parent['_updated'] == original['_updated']
@@ -310,12 +310,12 @@ class TestCreateA1:
         classes = getPopulatedMPMUDClasses
         proxyA1 = getSampleProxyA1
         proxyA = proxyA1.parent
-        parent = proxyA1.ultimateParent
+        parent = proxyA1.ultimate_parent
 
         # record current state
         original = dict( parent )
-        countA = len( proxyA.getSubdocContainer().keys() )
-        countA1 = len( proxyA1.getSubdocContainer().keys() )
+        countA = len( proxyA.get_subdoc_container().keys() )
+        countA1 = len( proxyA1.get_subdoc_container().keys() )
 
         # create a base class second-level proxy object
         newProxy = classes['A1'].create(
@@ -324,7 +324,7 @@ class TestCreateA1:
             key='newProxyA1'
         )
 
-        # Since the base class does not define a proxySubclassKey, verify none was added to the record
+        # Since the base class does not define a proxy_subclass_key, verify none was added to the record
         assert '_psckey' not in newProxy
         assert isinstance( newProxy, classes['A1'] )
 
@@ -339,8 +339,8 @@ class TestCreateA1:
             assert isinstance( newProxy, classes[key] )
 
         # verify four new entries created at the second level
-        assert len( proxyA.getSubdocContainer().keys() ) == countA
-        assert len( proxyA1.getSubdocContainer().keys() ) == countA1+4
+        assert len( proxyA.get_subdoc_container().keys() ) == countA
+        assert len( proxyA1.get_subdoc_container().keys() ) == countA1+4
 
         # confirm the parent document was saved
         assert parent['_updated'] > original['_updated']
@@ -351,12 +351,12 @@ class TestCreateA1NoSave:
         classes = getPopulatedMPMUDClasses
         proxyA1 = getSampleProxyA1
         proxyA = proxyA1.parent
-        parent = proxyA1.ultimateParent
+        parent = proxyA1.ultimate_parent
 
         # record current state
         original = dict( parent )
-        countA = len( proxyA.getSubdocContainer().keys() )
-        countA1 = len( proxyA1.getSubdocContainer().keys() )
+        countA = len( proxyA.get_subdoc_container().keys() )
+        countA1 = len( proxyA1.get_subdoc_container().keys() )
 
         # create a base class second-level proxy object
         newProxy = classes['A1'].create(
@@ -366,7 +366,7 @@ class TestCreateA1NoSave:
             autosave=False
         )
 
-        # Since the base class does not define a proxySubclassKey, verify none was added to the record
+        # Since the base class does not define a proxy_subclass_key, verify none was added to the record
         assert '_psckey' not in newProxy
         assert isinstance( newProxy, classes['A1'] )
 
@@ -382,8 +382,8 @@ class TestCreateA1NoSave:
             assert isinstance( newProxy, classes[key] )
 
         # verify four new entries created at the second level
-        assert len( proxyA.getSubdocContainer().keys() ) == countA
-        assert len( proxyA1.getSubdocContainer().keys() ) == countA1+4
+        assert len( proxyA.get_subdoc_container().keys() ) == countA
+        assert len( proxyA1.get_subdoc_container().keys() ) == countA1+4
 
         # confirm the parent document was not saved
         assert parent['_updated'] == original['_updated']
@@ -391,22 +391,22 @@ class TestCreateA1NoSave:
 
 
 class TestPolymorphicBasics:
-    def test_subclassMap( self , getPopulatedMPMUDClasses ):
-        '''getMPMUDClasses create a new proxySubclassMap namespace for each proxy base class
-        Verify the keys in the proxySubclass map
-        Verify the base class proxySubclass map is empty'''
+    def test_subclass_map( self , getPopulatedMPMUDClasses ):
+        '''getMPMUDClasses create a new proxy_subclass_map namespace for each proxy base class
+        Verify the keys in the proxy_subclass map
+        Verify the base class proxy_subclass map is empty'''
         classes = getPopulatedMPMUDClasses
-        assert len( mongo_objects.PolymorphicMongoSingleProxy.proxySubclassMap ) == 0
-        assert sorted( classes['A'].proxySubclassMap ) == ['Aa', 'Ab', 'Ac']
-        assert sorted( classes['A1'].proxySubclassMap ) == ['A1a', 'A1b', 'A1c']
-        assert sorted( classes['B'].proxySubclassMap ) == ['Ba', 'Bb', 'Bc']
+        assert len( mongo_objects.PolymorphicMongoSingleProxy.proxy_subclass_map ) == 0
+        assert sorted( classes['A'].proxy_subclass_map ) == ['Aa', 'Ab', 'Ac']
+        assert sorted( classes['A1'].proxy_subclass_map ) == ['A1a', 'A1b', 'A1c']
+        assert sorted( classes['B'].proxy_subclass_map ) == ['Ba', 'Bb', 'Bc']
 
 
-    def test_getProxy( self, getPopulatedMPMUDClasses, getSampleParent, getSampleProxyAKeys, getSampleProxyA1Keys ):
+    def test_get_proxy( self, getPopulatedMPMUDClasses, getSampleParent, getSampleProxyAKeys, getSampleProxyA1Keys ):
         '''Test accessing both first-level and second-level proxies
 
         For testing convenience, the keys of the getPopulatedMPMUDClasses dictionary
-        match the proxySubclassKey for each subclass'''
+        match the proxy_subclass_key for each subclass'''
         classes = getPopulatedMPMUDClasses
         parent = getSampleParent
 
@@ -414,7 +414,7 @@ class TestPolymorphicBasics:
         for keyA in getSampleProxyAKeys:
 
             # create a first-level proxy object
-            proxyA = classes['A'].getProxy( parent, keyA )
+            proxyA = classes['A'].get_proxy( parent, keyA )
 
             # verify dictionary
             assert id( proxyA.data() ) == id( parent[ keyA ] )
@@ -429,7 +429,7 @@ class TestPolymorphicBasics:
             for keyA1 in getSampleProxyA1Keys:
 
                 # create a second-level proxy object
-                proxyA1 = classes['A1'].getProxy( proxyA, keyA1 )
+                proxyA1 = classes['A1'].get_proxy( proxyA, keyA1 )
 
                 # verify dictionary
                 assert id( proxyA1.data() ) == id( parent[ keyA ][ keyA1 ] )
@@ -441,14 +441,14 @@ class TestPolymorphicBasics:
                     assert isinstance( proxyA1, classes[ proxyA1['_psckey'] ] )
 
 
-    def test_getSubclassByKey( self, getMPMUDClasses ):
+    def test_get_subclass_by_key( self, getMPMUDClasses ):
         classes = getMPMUDClasses
-        assert classes['A'].getSubclassByKey( 'Aa' ) == classes['Aa']
+        assert classes['A'].get_subclass_by_key( 'Aa' ) == classes['Aa']
 
 
-    def test_getSubclassFromDoc( self, getMPMUDClasses ):
+    def test_get_subclass_from_doc( self, getMPMUDClasses ):
         classes = getMPMUDClasses
-        assert classes['A'].getSubclassByKey( 'Aa' ) == classes['Aa']
-        assert classes['A'].getSubclassFromDoc( { classes['A'].proxySubclassKeyName : 'Aa' } ) == classes['Aa']
+        assert classes['A'].get_subclass_by_key( 'Aa' ) == classes['Aa']
+        assert classes['A'].get_subclass_from_doc( { classes['A'].proxy_subclass_key_name : 'Aa' } ) == classes['Aa']
 
 

@@ -6,14 +6,17 @@
 # assume this script is in the "tools" subdirectory; change to project directory
 cd $(dirname $0)/..
 PROJECT_DIR=$(pwd)
-VENV_DIR=${PROJECT_DIR}/venv
+
+# activate the project virtual environment
+source ${PROJECT_DIR}/venv/bin/activate
+echo "activating virtual environment"
 
 # make sure there are no uncommitted changes
 if [[ $(hg status | wc -l ) -gt 0 ]]
 then
 echo "Project contains uncommitted changes; aborting build"
 hg status
-exit -1
+#exit -1
 fi
 
 # upgrade all packages

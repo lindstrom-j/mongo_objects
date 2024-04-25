@@ -19,7 +19,7 @@ dependencies = [
 ]
 description = "Access MongoDB documents and subdocuments through user-defined UserDict and proxy objects."
 dynamic = ["version"]
-readme = "README.md"
+readme = "README.rst"
 requires-python = ">=3.8"
 
 [project.urls]
@@ -30,3 +30,8 @@ path = "src/__about__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mongo_objects.py"]
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    'ignore:datetime.datetime.utcnow\(\) is deprecated and scheduled for removal in a future version.:DeprecationWarning',
+]
