@@ -11,4 +11,4 @@ echo "activating virtual environment"
 # update all installed packages and rewrite requirements.txt
 pip install --upgrade --disable-pip-version-check $(pip freeze --disable-pip-version-check)
 pip freeze --disable-pip-version-check > requirements.txt
-hg diff requirements.txt | cat
+git diff requirements.txt | cat
