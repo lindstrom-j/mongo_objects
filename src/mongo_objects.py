@@ -44,6 +44,11 @@ class MongoUserDict( UserDict ):
     collection_name = None
     database = None
 
+    # If object_version is non-None, find() and find_one() by default restrict queries
+    # to documents with the current object_version
+    # This enables a type of schema versioning.
+    object_version = None
+
     # The character sequence used to separate the document ID from proxy subdocument keys
     # This may be overriden but it is the user's responsibility to guarantee that this
     # sequence will never appear in any ID or subdoc key.
@@ -60,6 +65,27 @@ class MongoUserDict( UserDict ):
         # Authorize creating this object prior to returning to the user
         if not self.authorize_init():
             raise MongoObjectAuthFailed
+
+
+    @classmethod
+    def add_object_version_filter( cls, filter, object_version ):
+        '''Implement automatic object version filtering for find() and find_one()
+        The command-line object-version affects if and how to implement
+        object version filtering.'''
+        if cls.object_version is not None:
+            # False suppresses automatic object_version filtering
+            if object_version is False:
+                pass
+            # None (the default) filters the query to the current class object version
+            elif object_version is None:
+                filter = dict(filter)
+                filter['_objver'] = cls.object_version
+
+            # Any other value filters object version to that value
+            else:
+                filter = dict(filter)
+                filter['_objver'] = object_version
+        return filter
 
 
     # Authorization hooks()
@@ -119,17 +145,22 @@ class MongoUserDict( UserDict ):
 
 
     @classmethod
-    def find( cls, filter={}, projection=None, readonly=False, **kwargs ):
+    def find( cls, filter={}, projection=None, readonly=None, object_version=None, **kwargs ):
         '''Return matching documents as instances of this class'''
         # Authorize reading at all
         if not cls.authorize_pre_read():
             raise MongoObjectAuthFailed
 
-        # if a projection is provided, force the resulting object to be read-only
-        readonly = readonly or projection is not None
+        # if readonly is None, by default force queries with a projection to be read-only
+        # otherwise, accept the (presumably boolean) value provided by the user
+        if readonly is None:
+            readonly = projection is not None
+
+        # automatically filter by object version if requested
+        if cls.object_version is not None:
+            filter = cls.add_object_version_filter( filter, object_version )
 
         for doc in cls.collection().find( filter, projection, **kwargs ):
-            print( "STEP 4" )
             obj = cls(doc, readonly=readonly)
             # Authorize reading this particular document object before returning it
             if obj.authorize_read():
@@ -137,14 +168,20 @@ class MongoUserDict( UserDict ):
 
 
     @classmethod
-    def find_one( cls, filter={}, projection=None, readonly=False, no_match=None, **kwargs ):
+    def find_one( cls, filter={}, projection=None, readonly=None, object_version=None, no_match=None, **kwargs ):
         '''Return a single matching document as an instance of this class or None'''
         # Authorize reading at all
         if not cls.authorize_pre_read():
             raise MongoObjectAuthFailed
 
-        # if a projection is provided, force the resulting object to be read-only
-        readonly = readonly or projection is not None
+        # if readonly is None, by default force queries with a projection to be read-only
+        # otherwise, accept the (presumably boolean) value provided by the user
+        if readonly is None:
+            readonly = projection is not None
+
+        # automatically filter by object version if requested
+        if cls.object_version is not None:
+            filter = cls.add_object_version_filter( filter, object_version )
 
         doc = cls.collection().find_one( filter, projection, **kwargs )
         if doc is not None:
@@ -227,6 +264,10 @@ class MongoUserDict( UserDict ):
            This protects against overwriting documents that have been updated elsewhere.
         '''
 
+        # internal class to note if a metadata field has added and had no original value
+        class NewFieldAdded( object ):
+            pass
+
         # authorize saving this document
         if not self.authorize_save():
             raise MongoObjectAuthFailed
@@ -235,16 +276,24 @@ class MongoUserDict( UserDict ):
         if self.readonly:
             raise MongoObjectReadOnly( f"Can't save readonly object {type(self)} at {id(self)}" )
 
+        # Use a dictionary to record original metadata in case they need to be rolled back
+        # These metadata values should never be None, so during rollback we remove any values
+        # for which get() returned None.
+        original_metadata = {}
+
         # set updated timestamp
-        # Note the original value in case we need to roll back
-        added_updated = '_updated' not in self
-        original_updated = self.get('_updated')
+        original_metadata['_updated'] = self.get('_updated')
         self['_updated'] = self.utcnow()
 
         # add created timestamp if it doesn't exist
-        # set flag in case we need to roll back
-        added_created = '_created' not in self
-        self.setdefault( '_created', self['_updated'] )
+        if '_created' not in self:
+            original_metadata['_created'] = None
+            self['_created'] = self['_updated']
+
+        # add object version if provided
+        if self.object_version is not None:
+            original_metadata['_objver'] = self.get('_objver')
+            self['_objver'] = self.object_version
 
         try:
             # if the document has never been written to the database, write it now and record the ID
@@ -259,21 +308,22 @@ class MongoUserDict( UserDict ):
             # Otherwise, only update a document with the same updated timestamp as our in-memory object
             else:
                 result = self.collection().find_one_and_replace(
-                    { '_id' : self['_id'], '_updated' : original_updated },
+                    { '_id' : self['_id'], '_updated' : original_metadata['_updated'] },
                     self.data,
                     return_document=ReturnDocument.AFTER )
 
                 # on failure, we assume the document has been updated elsewhere and raise an exception
                 assert result is not None, f"document {self.id()} already updated"
 
-        # on any error roll back _updated and _created to the original value or remove if we added them
+        # on any error roll back to the original metadata
         except Exception as e:
-            if added_created:
-                del self['_created']
-            if added_updated:
-                del self['_updated']
-            else:
-                self['_updated'] = original_updated
+            for (k, v) in original_metadata.items():
+                # If the original value is None, assume we added the field and should remove it
+                if v is None:
+                    del self[k]
+                # Otherwise, restore the original value
+                else:
+                    self[k] = v
             raise(e)
 
 

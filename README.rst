@@ -18,8 +18,8 @@ Subdocuments are accessed through dictionary proxy objects:
 * data access is proxied back to the parent so no separate database access is performed
 * subdocuments have their own unique URL-safe ID useful for loading the data
 * subdocuments can be grouped in either dictionary or list containers
-* polymorphic subdocuments are supported within same container
-* using subdocuments avoids "JOIN-like" additional database queries
+* polymorphic subdocuments are supported within the same container
+* using subdocuments avoids "JOIN-like" additional database queries across collections
 
 
 Example

@@ -54,6 +54,177 @@ def getPopulatedMMUDClass( getMMUDClass, sampleData ):
 
 
 
+@pytest.fixture( scope='class' )
+def getVersionedPopulatedMMUDClass( getMMUDClass, sampleData ):
+    '''Like getPopulatedMMUDClass except each document is saved
+    with a different version number.
+
+    MMUD is left with the final object version number.'''
+
+    MMUD = getMMUDClass
+
+    # for each entry in the sampleData, save it to the collection configured in MMUD
+    for (ver, x) in enumerate( sampleData ):
+        MMUD.object_version = ver+1
+        obj = MMUD(x)
+        obj.save()
+    return MMUD
+
+
+
+class TestVersioning:
+    '''Test how various function perform with object versioning'''
+
+    def test_find_all_current_version( self, getVersionedPopulatedMMUDClass ):
+        MMUD = getVersionedPopulatedMMUDClass
+
+        # verify there is a current object version
+        assert MMUD.object_version is not None
+
+        # There should only be one document at the current version (the default query)
+        result = list( MMUD.find() )
+        assert len( result ) == 1
+        assert result[0]['_objver'] == MMUD.object_version
+
+
+    def test_find_all_specified_version( self, getVersionedPopulatedMMUDClass ):
+        MMUD = getVersionedPopulatedMMUDClass
+
+        # verify there is a current object version
+        assert MMUD.object_version is not None
+
+        # There should only be one document at version 1
+        result = list( MMUD.find( object_version=1 ) )
+        assert len( result ) == 1
+        assert result[0]['_objver'] == 1
+
+
+    def test_find_all_versioning_suppressed( self, getVersionedPopulatedMMUDClass, sampleData ):
+        MMUD = getVersionedPopulatedMMUDClass
+
+        # verify there is a current object version
+        assert MMUD.object_version is not None
+
+        # All documents should be returned if object versioning is suppressed
+        result = list( MMUD.find( object_version=False ) )
+        assert len( result ) == len( sampleData )
+
+
+    def test_find_all_nonexistent_version( self, getVersionedPopulatedMMUDClass ):
+        MMUD = getVersionedPopulatedMMUDClass
+
+        # verify there is a current object version
+        assert MMUD.object_version is not None
+
+        # Nothing should be returned at a non-existent version
+        result = list( MMUD.find( object_version=10000000 ) )
+        assert len( result ) == 0
+
+
+    def test_find_one_current_version( self, getVersionedPopulatedMMUDClass, sampleData ):
+        MMUD = getVersionedPopulatedMMUDClass
+
+        # verify there is a current object version
+        assert MMUD.object_version is not None
+
+        # There should only be one document at the current version (the default query)
+        matches = 0
+        for doc in sampleData:
+            filter = dict( doc )
+            result = MMUD.find_one( filter )
+            if result is not None:
+                assert result['_objver'] == MMUD.object_version
+                matches += 1
+
+        assert matches == 1
+
+
+    def test_find_one_specified_version( self, getVersionedPopulatedMMUDClass, sampleData ):
+        MMUD = getVersionedPopulatedMMUDClass
+
+        # verify there is a current object version
+        assert MMUD.object_version is not None
+
+        # There should only be one document at version 1
+        matches = 0
+        for doc in sampleData:
+            filter = dict( doc )
+            result = MMUD.find_one( filter, object_version=1 )
+            if result is not None:
+                assert result['_objver'] == 1
+                matches += 1
+
+        assert matches == 1
+
+
+    def test_find_one_versioning_suppressed( self, getVersionedPopulatedMMUDClass, sampleData ):
+        MMUD = getVersionedPopulatedMMUDClass
+
+        # verify there is a current object version
+        assert MMUD.object_version is not None
+
+        # Any document may be returned if object versioning is suppressed
+        for doc in sampleData:
+            filter = dict( doc )
+            assert MMUD.find_one( filter, object_version=False ) is not None
+
+
+    def test_find_one_nonexistent_version( self, getVersionedPopulatedMMUDClass, sampleData ):
+        MMUD = getVersionedPopulatedMMUDClass
+
+        # verify there is a current object version
+        assert MMUD.object_version is not None
+
+        # None should be returned at a non-existent version for any document
+        for doc in sampleData:
+            filter = dict( doc )
+            assert MMUD.find_one( filter, object_version=10000000 ) is None
+
+
+
+class TestVersionedSave:
+
+    def test_save_version( self, getVersionedPopulatedMMUDClass ):
+        MMUD = getVersionedPopulatedMMUDClass
+
+        # verify there is a current object version
+        assert MMUD.object_version is not None
+
+        # Create an empty object
+        obj = MMUD( {} )
+        assert '_objver' not in obj
+
+        # save the object and verify the version was added to the document
+        obj.save()
+        assert obj['_objver'] == MMUD.object_version
+
+        # load the data from the database and check the version
+        obj2 = MMUD.load_by_id( obj.id() )
+        assert obj2['_objver'] == MMUD.object_version
+
+
+
+class TestVersionedSaveException:
+
+    def test_save_version_exception( self, getVersionedPopulatedMMUDClass ):
+        MMUD = getVersionedPopulatedMMUDClass
+
+        # verify there is a current object version
+        assert MMUD.object_version is not None
+
+        # Create an invalid object; BSON dictionary keys must be strings
+        obj = MMUD( { 1 : "not valid BSON"} )
+        assert '_objver' not in obj
+
+        # saving the object will raise an exceptionsave the object and verify the version was added to the document
+        with pytest.raises( Exception ):
+            obj.save()
+
+        # verify that the object version was removed during rollback
+        assert '_objver' not in obj
+
+
+
 class TestSave:
     '''Test various permutations of MongoUserDict.save()
     Other functionality is tested in a separate class'''
@@ -112,7 +283,7 @@ class TestSave:
 
 
     def test_save_exception_1( self, getMMUDClass ):
-        '''Test that an exception saving a new document removes _created and _updated timestamps'''
+        '''Test that an exception saving a new document removes _created, _updated timestamps'''
         MMUD = getMMUDClass
 
         # count documents
@@ -122,6 +293,7 @@ class TestSave:
         obj = MMUD()
         assert '_created' not in obj
         assert '_updated' not in obj
+        assert '_objver' not in obj
 
         # Create an exception
         # MongoDB keys must be strings, so use an integer to create the exception
@@ -134,9 +306,10 @@ class TestSave:
         # verify that nothing was saved
         assert MMUD.collection().count_documents( {} ) == count
 
-        # verify that _created and _updated were removed
+        # verify that _created and _updated were removed; _objver won't have been added anyway
         assert '_created' not in obj
         assert '_updated' not in obj
+        assert '_objver' not in obj
 
 
     def test_save_exception_2( self, getMMUDClass ):
@@ -399,6 +572,60 @@ class TestBasics:
             obj = LocalMMUD( sampleData[0] )
 
 
+    def test_add_object_version( self ):
+        '''Verify add_object_version adds the correct filter
+        The original filter should be left intact.'''
+        class LocalClass( mongo_objects.MongoUserDict ):
+            object_version = 5
+
+        # object_version = False never adds a filter
+        filter = {}
+        result = LocalClass.add_object_version_filter( filter, False )
+        assert len(filter) == 0
+        assert len(result) == 0
+
+        # object_version = None adds a filter for the current object version
+        filter = {}
+        result = LocalClass.add_object_version_filter( filter, None )
+        assert len(filter) == 0
+        assert result == { '_objver' : 5 }
+
+        # object_version = Value adds a filter for the current value
+        # With no class object version, nothing will happen
+        filter = {}
+        result = LocalClass.add_object_version_filter( filter, 10 )
+        assert len(filter) == 0
+        assert result == { '_objver' : 10 }
+
+
+    def test_add_object_version_empty( self ):
+        '''Verify add_object_version() if the class has no object version
+        Since the class has no object version, no filter should be
+        added under any circumstances'''
+        class LocalClass( mongo_objects.MongoUserDict ):
+            pass
+
+        # object_version = False never adds a filter
+        filter = {}
+        result = LocalClass.add_object_version_filter( filter, False )
+        assert len(filter) == 0
+        assert len(result) == 0
+
+        # object_version = None adds a filter for the current object version
+        # With no class object version, nothing will happen
+        filter = {}
+        result = LocalClass.add_object_version_filter( filter, None )
+        assert len(filter) == 0
+        assert len(result) == 0
+
+        # object_version = Value adds a filter for the current value
+        # With no class object version, nothing will happen
+        filter = {}
+        result = LocalClass.add_object_version_filter( filter, 10 )
+        assert len(filter) == 0
+        assert len(result) == 0
+
+
     def test_collection( self, getPopulatedMMUDClass ):
         MMUD = getPopulatedMMUDClass
         assert isinstance( MMUD.collection(), Collection )
@@ -406,6 +633,10 @@ class TestBasics:
 
     def test_find_all( self, getPopulatedMMUDClass, sampleData ):
         MMUD = getPopulatedMMUDClass
+
+        # verify that this is an unversioned test
+        assert MMUD.object_version is None
+
         result = list( MMUD.find() )
 
         # verify that we found all the entries
@@ -434,6 +665,10 @@ class TestBasics:
 
     def test_find_none( self, getPopulatedMMUDClass ):
         MMUD = getPopulatedMMUDClass
+
+        # verify that this is an unversioned test
+        assert MMUD.object_version is None
+
         result = list( MMUD.find( { 'not-a-field' : 'wont-match-anything' } ) )
 
         # verify that we found nothing
@@ -443,6 +678,10 @@ class TestBasics:
     def test_find_single( self, getPopulatedMMUDClass, sampleData ):
         '''Use a filter to find a single record, in this case, the first sample by name'''
         MMUD = getPopulatedMMUDClass
+
+        # verify that this is an unversioned test
+        assert MMUD.object_version is None
+
         result = list( MMUD.find( { 'name' : sampleData[0]['name'] } ) )
 
         # verify that we found a single entry
@@ -456,6 +695,10 @@ class TestBasics:
     def test_find_projection_1( self, getPopulatedMMUDClass ):
         '''Test find() with a "positive" projection'''
         MMUD = getPopulatedMMUDClass
+
+        # verify that this is an unversioned test
+        assert MMUD.object_version is None
+
         # Verify projection produced the proper key set
         # Also confirm object is marked readonly
         for x in MMUD.find( {}, { 'amount' : True } ):
@@ -470,6 +713,10 @@ class TestBasics:
     def test_find_projection_2( self, getPopulatedMMUDClass ):
         '''Test find() with a "positive" projection but suppress _id'''
         MMUD = getPopulatedMMUDClass
+
+        # verify that this is an unversioned test
+        assert MMUD.object_version is None
+
         # Verify projection produced the proper key set
         # Also confirm object is marked readonly
         for x in MMUD.find( {}, { '_id' : False, 'name' : True } ):
@@ -484,6 +731,10 @@ class TestBasics:
     def test_find_projection_3( self, getPopulatedMMUDClass ):
         '''Test find() with a "negative" projection'''
         MMUD = getPopulatedMMUDClass
+
+        # verify that this is an unversioned test
+        assert MMUD.object_version is None
+
         # Verify projection produced the proper key set
         # Also confirm object is marked readonly
         for x in MMUD.find( {}, { 'amount' : False } ):
@@ -498,6 +749,10 @@ class TestBasics:
     def test_find_projection_4( self, getPopulatedMMUDClass ):
         '''Test find() with a "negative" projection and suppress _id'''
         MMUD = getPopulatedMMUDClass
+
+        # verify that this is an unversioned test
+        assert MMUD.object_version is None
+
         # Verify projection produced the proper key set
         # Also confirm object is marked readonly
         for x in MMUD.find( {}, { '_id' : False, 'name' : False } ):
@@ -511,6 +766,10 @@ class TestBasics:
 
     def test_find_readonly( self, getPopulatedMMUDClass ):
         MMUD = getPopulatedMMUDClass
+
+        # verify that this is an unversioned test
+        assert MMUD.object_version is None
+
         result = list( MMUD.find( readonly=True ) )
 
         # verify all objects are marked readonly
@@ -565,6 +824,10 @@ class TestBasics:
     def test_find_one( self, getPopulatedMMUDClass ):
         '''Test returning a single (random) object'''
         MMUD = getPopulatedMMUDClass
+
+        # verify that this is an unversioned test
+        assert MMUD.object_version is None
+
         result = MMUD.find_one()
         assert isinstance( result, MMUD )
         assert '_id' in result
@@ -578,6 +841,10 @@ class TestBasics:
     def test_find_one_none( self, getPopulatedMMUDClass ):
         '''Verify a non-matching filter produces a None result'''
         MMUD = getPopulatedMMUDClass
+
+        # verify that this is an unversioned test
+        assert MMUD.object_version is None
+
         result = MMUD.find_one( { 'not-a-field' : 'wont-match-anything' } )
 
         # verify that we found nothing
@@ -587,6 +854,9 @@ class TestBasics:
     def test_find_one_none_custom_return( self, getPopulatedMMUDClass ):
         '''Verify a non-matching filter produces our custom "no_match" result'''
         MMUD = getPopulatedMMUDClass
+
+        # verify that this is an unversioned test
+        assert MMUD.object_version is None
 
         class EmptyResponse( object ):
             pass
@@ -599,6 +869,10 @@ class TestBasics:
     def test_find_one_filter( self, getPopulatedMMUDClass, sampleData ):
         '''Use a filter to find a specific single record, in this case, the third sample by name'''
         MMUD = getPopulatedMMUDClass
+
+        # verify that this is an unversioned test
+        assert MMUD.object_version is None
+
         result = MMUD.find_one( { 'name' : sampleData[2]['name'] } )
 
         # verify that we found the right record
@@ -608,6 +882,10 @@ class TestBasics:
     def test_find_one_projection_1( self, getPopulatedMMUDClass ):
         '''Test find() with a "positive" projection'''
         MMUD = getPopulatedMMUDClass
+
+        # verify that this is an unversioned test
+        assert MMUD.object_version is None
+
         # Verify projection produced the proper key set
         # Also confirm object is marked readonly
         result = MMUD.find_one( {}, { 'amount' : True } )
@@ -622,6 +900,10 @@ class TestBasics:
     def test_find_one_projection_2( self, getPopulatedMMUDClass ):
         '''Test find() with a "positive" projection but suppress _id'''
         MMUD = getPopulatedMMUDClass
+
+        # verify that this is an unversioned test
+        assert MMUD.object_version is None
+
         # Verify projection produced the proper key set
         # Also confirm object is marked readonly
         result = MMUD.find_one( {}, { '_id' : False, 'name' : True } )
@@ -636,6 +918,10 @@ class TestBasics:
     def test_find_one_projection_3( self, getPopulatedMMUDClass ):
         '''Test find() with a "negative" projection'''
         MMUD = getPopulatedMMUDClass
+
+        # verify that this is an unversioned test
+        assert MMUD.object_version is None
+
         # Verify projection produced the proper key set
         # Also confirm object is marked readonly
         result = MMUD.find_one( {}, { 'amount' : False } )
@@ -650,6 +936,10 @@ class TestBasics:
     def test_find_one_projection_4( self, getPopulatedMMUDClass ):
         '''Test find() with a "negative" projection and suppress _id'''
         MMUD = getPopulatedMMUDClass
+
+        # verify that this is an unversioned test
+        assert MMUD.object_version is None
+
         # Verify projection produced the proper key set
         # Also confirm object is marked readonly
         result = MMUD.find_one( {}, { '_id' : False, 'name' : False } )
@@ -818,7 +1108,7 @@ class TestBasics:
     def test_id_new_object( self, getMMUDClass ):
         MMUD = getMMUDClass
 
-        # new object don't have an _id value yet
+        # new objects don't have an _id value yet
         # so id() will raise an exception
         obj = MMUD( {} )
         with pytest.raises( Exception ):
