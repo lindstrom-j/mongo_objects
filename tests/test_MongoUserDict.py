@@ -275,6 +275,25 @@ class TestSave:
             result.save()
 
 
+    def test_save_no_auth( self, getPopulatedMMUDClass ):
+        '''Test attempting to save a document without authorization'''
+        class LocalMMUD( getPopulatedMMUDClass):
+            def authorize_save( self ):
+                return False
+
+        obj = LocalMMUD.find_one()
+        original = dict( obj )
+
+        # verify saving a document without authorization produces an exception
+        with pytest.raises( mongo_objects.MongoObjectAuthFailed ):
+            obj.save()
+
+        # verify nothing was saved
+        assert obj['_updated'] == original['_updated']
+
+
+
+
 class TestDelete:
     '''Test MongoUserDict.delete() in its own database'''
 
@@ -318,6 +337,26 @@ class TestDelete:
         assert count == MMUD.collection().count_documents( {} )
 
 
+    def test_delete_no_auth( self, getPopulatedMMUDClass ):
+        '''Test attempting to delete a document without authorization'''
+        class LocalMMUD( getPopulatedMMUDClass):
+            def authorize_delete( self ):
+                return False
+
+        obj = LocalMMUD.find_one()
+
+        # note the number of documents in the database
+        count = LocalMMUD.collection().count_documents( {} )
+
+        # verify deleting a document without authorization produces an exception
+        with pytest.raises( mongo_objects.MongoObjectAuthFailed ):
+            obj.delete()
+
+        # verify the database document count hasn't changed
+        assert count == LocalMMUD.collection().count_documents( {} )
+
+
+
 
 class TestBasics:
     '''Test all other functionality of MongoUserDict'''
@@ -348,6 +387,16 @@ class TestBasics:
         obj = MMUD(readonly=True)
         assert len(obj.data) == 0
         assert obj.readonly is True
+
+
+    def test_init_no_auth( self, getMMUDClass, sampleData ):
+        class LocalMMUD( getMMUDClass):
+            def authorize_init( self ):
+                return False
+
+        # verify initializing a document without authorization produces an exception
+        with pytest.raises( mongo_objects.MongoObjectAuthFailed ):
+            obj = LocalMMUD( sampleData[0] )
 
 
     def test_collection( self, getPopulatedMMUDClass ):
@@ -469,6 +518,50 @@ class TestBasics:
             assert x.readonly is True
 
 
+    def test_find_no_pre_auth( self, getPopulatedMMUDClass ):
+        '''Test attempting to read without pre-authorization'''
+        class LocalMMUD( getPopulatedMMUDClass ):
+            @classmethod
+            def authorize_pre_read( cls ):
+                return False
+
+        # verify reading documents without pre-read authorization produces an exception
+        # must convert to a list or the generator is never called
+        with pytest.raises( mongo_objects.MongoObjectAuthFailed ):
+            list( LocalMMUD.find() )
+
+
+    def test_find_no_auth_1( self, getPopulatedMMUDClass ):
+        '''Test attempting to read without authorization'''
+        class LocalMMUD( getPopulatedMMUDClass):
+            def authorize_read( self ):
+                return False
+
+        # verify reading documents without read authorization produces an empty list
+        result = LocalMMUD.find()
+        assert len( list( result ) ) == 0
+
+
+    def test_find_no_auth_2( self, getPopulatedMMUDClass ):
+        '''Test attempting to read without authorization for certain objects'''
+
+        # first collect a list of object IDs
+        ids = [ x.id() for x in getPopulatedMMUDClass.find() ]
+
+        # create a class authorized to read all but the first ID
+        class LocalMMUD( getPopulatedMMUDClass):
+            def authorize_read( self ):
+                return self.id() != ids[0]
+
+        # read all documents with the new custom class
+        ids2 = [ x.id() for x in LocalMMUD.find() ]
+        # construct a list of all ids missing from the second find() call
+        diff = list( set(ids).difference( ids2 ) )
+        # verify that only ids[0] is missing (the ID excluded by authorize_read() )
+        assert len( diff ) == 1
+        assert diff[0] == ids[0]
+
+
     def test_find_one( self, getPopulatedMMUDClass ):
         '''Test returning a single (random) object'''
         MMUD = getPopulatedMMUDClass
@@ -483,11 +576,24 @@ class TestBasics:
 
 
     def test_find_one_none( self, getPopulatedMMUDClass ):
+        '''Verify a non-matching filter produces a None result'''
         MMUD = getPopulatedMMUDClass
         result = MMUD.find_one( { 'not-a-field' : 'wont-match-anything' } )
 
         # verify that we found nothing
         assert result is None
+
+
+    def test_find_one_none_custom_return( self, getPopulatedMMUDClass ):
+        '''Verify a non-matching filter produces our custom "noMatch" result'''
+        MMUD = getPopulatedMMUDClass
+
+        class EmptyResponse( object ):
+            pass
+
+        result = MMUD.find_one( { 'not-a-field' : 'wont-match-anything' }, noMatch=EmptyResponse() )
+
+        assert isinstance( result, EmptyResponse )
 
 
     def test_find_one_filter( self, getPopulatedMMUDClass, sampleData ):
@@ -561,6 +667,29 @@ class TestBasics:
 
         # verify object are marked readonly
         result.readonly is True
+
+
+    def test_find_one_no_pre_auth( self, getPopulatedMMUDClass ):
+        '''Test attempting to read without pre-authorization'''
+        class LocalMMUD( getPopulatedMMUDClass ):
+            @classmethod
+            def authorize_pre_read( cls ):
+                return False
+
+        # verify reading a document without pre-read authorization produces an exception
+        with pytest.raises( mongo_objects.MongoObjectAuthFailed ):
+            LocalMMUD.find_one()
+
+
+    def test_find_one_no_auth( self, getPopulatedMMUDClass ):
+        '''Test attempting to read without authorization'''
+        class LocalMMUD( getPopulatedMMUDClass):
+            def authorize_read( self ):
+                return False
+
+        # verify reading documents without read authorization produces an empty list
+        result = LocalMMUD.find_one()
+        assert result is None
 
 
     def test_getUniqueInteger( self, getMMUDClass ):

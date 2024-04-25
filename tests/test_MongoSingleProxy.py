@@ -725,13 +725,13 @@ class TestBasics:
     def test_id( self, getSampleProxyA ):
         '''Test ID for single level proxy'''
         proxy = getSampleProxyA
-        assert proxy.id() == f"{proxy.parent.id()}{proxy.parent.subdocKeySep}{proxy.key}"
+        assert proxy.id() == f"{proxy.parent.id()}{proxy.parent.subdocKeySep}0"
 
 
     def test_id_A1( self, getSampleProxyA1 ):
         '''Test ID for two-level proxy'''
         proxy = getSampleProxyA1
-        assert proxy.id() == f"{proxy.ultimateParent.id()}{proxy.ultimateParent.subdocKeySep}{proxy.parent.key}{proxy.ultimateParent.subdocKeySep}{proxy.key}"
+        assert proxy.id() == f"{proxy.ultimateParent.id()}{proxy.ultimateParent.subdocKeySep}0{proxy.ultimateParent.subdocKeySep}0"
 
 
     def test_init( self, getPopulatedMMUDClasses, getSampleParent, getSampleProxyAKey, getSampleProxyA1Key ):

@@ -29,6 +29,9 @@ from pymongo.collection import ReturnDocument
 class MongoObjectReadOnly( Exception ):
     pass
 
+class MongoObjectAuthFailed( Exception ):
+    pass
+
 
 ################################################################################
 # MongoDB document wrappers
@@ -54,6 +57,49 @@ class MongoUserDict( UserDict ):
         super().__init__( doc )
         self.readonly = readonly
 
+        # Authorize creating this object prior to returning to the user
+        if not self.authorize_init():
+            raise MongoObjectAuthFailed
+
+
+    # Authorization hooks()
+    # The user may call these hooks to authorize various CRUD operations
+    def authorize_init( self ):
+        '''Called after the document object is initialized but
+        before it is returned to the user.
+        If the return value is not truthy, an exception is raised.'''
+        return True
+
+    def authorize_delete( self ):
+        '''Called before the current document is deleted.
+        If the return value is not truthy, an exception is raised.'''
+        return True
+
+    @classmethod
+    def authorize_pre_read( cls ):
+        '''Called before a read operation is performed.
+        This is a class method as no data has been read and no
+        document object has been created.
+        If the return value is not truthy, an exception is raised.'''
+        return True
+
+    def authorize_read( self ):
+        '''Called after a document has been read but before the
+        data is returned to the user.
+        If the return value is not truthy, the data will
+        not be returned.
+
+        Note that if find_one() only inspects the first document
+        returned by the underlying MongoDB find_one() call. If the
+        document returned does not pass authorization, no attempt is
+        made to locate another matching document.'''
+        return True
+
+    def authorize_save( self ):
+        '''Called before the current document is saved.
+        If the return value is not truthy, an exception is raised.'''
+        return True
+
 
     @classmethod
     def collection( cls ):
@@ -65,6 +111,9 @@ class MongoUserDict( UserDict ):
         '''Delete the current object
         Remove the id so save() will know this is a new object if we try to re-save.'''
         if '_id' in self:
+            # Authorize deleting this object
+            if not self.authorize_delete():
+                raise MongoObjectAuthFailed
             self.collection().find_one_and_delete( { '_id' : ObjectId( self['_id'] ) } )
             del self['_id']
 
@@ -72,28 +121,44 @@ class MongoUserDict( UserDict ):
     @classmethod
     def find( cls, filter={}, projection=None, readonly=False, **kwargs ):
         '''Return matching documents as instances of this class'''
+        # Authorize reading at all
+        if not cls.authorize_pre_read():
+            raise MongoObjectAuthFailed
+
         # if a projection is provided, force the resulting object to be read-only
         readonly = readonly or projection is not None
 
         for doc in cls.collection().find( filter, projection, **kwargs ):
-            yield cls(doc, readonly=readonly)
+            print( "STEP 4" )
+            obj = cls(doc, readonly=readonly)
+            # Authorize reading this particular document object before returning it
+            if obj.authorize_read():
+                yield obj
 
 
     @classmethod
-    def find_one( cls, filter={}, projection=None, readonly=False, **kwargs ):
+    def find_one( cls, filter={}, projection=None, readonly=False, noMatch=None, **kwargs ):
         '''Return a single matching document as an instance of this class or None'''
+        # Authorize reading at all
+        if not cls.authorize_pre_read():
+            raise MongoObjectAuthFailed
+
         # if a projection is provided, force the resulting object to be read-only
         readonly = readonly or projection is not None
 
         doc = cls.collection().find_one( filter, projection, **kwargs )
         if doc is not None:
-            return cls(doc, readonly=readonly)
-        return None
+            obj = cls(doc, readonly=readonly)
+            # Authorize reading this particular document object before returning it
+            if obj.authorize_read():
+                return obj
+        return noMatch
 
 
     def getUniqueInteger( self, autosave=True ):
         '''Provide the next unique integer for this document.
         These integers are convenient for use as keys of subdocuments.
+        Start with 1; 0 is reserved for single proxy documents which don't have a key.
         By default, the document is saved.'''
         self.setdefault( '_lastUniqueInteger', 0 )
         self['_lastUniqueInteger'] += 1
@@ -155,6 +220,10 @@ class MongoUserDict( UserDict ):
         3) Otherwise, only a document with this _id and _updated timestamp will be replaced.
            This protects against overwriting documents that have been updated elsewhere.
         '''
+
+        # authorize saving this document
+        if not self.authorize_save():
+            raise MongoObjectAuthFailed
 
         # refuse to save a read-only document
         if self.readonly:
@@ -251,23 +320,37 @@ class PolymorphicMongoUserDict( MongoUserDict ):
     @classmethod
     def find( cls, filter={}, projection=None, readonly=False, **kwargs ):
         '''Return matching documents as appropriate subclass instances'''
+        # Authorize reading at all
+        if not cls.authorize_pre_read():
+            raise MongoObjectAuthFailed
+
         # if a projection is provided, force the resulting object to be read-only
         readonly = readonly or projection is not None
 
         for doc in cls.collection().find( filter, projection, **kwargs ):
-            yield cls.instantiate(doc, readonly=readonly)
+            obj = cls.instantiate(doc, readonly=readonly)
+            # Authorize reading this particular document object before returning it
+            if obj.authorize_read():
+                yield obj
 
 
     @classmethod
-    def find_one( cls, filter={}, projection=None, readonly=False, **kwargs ):
+    def find_one( cls, filter={}, projection=None, readonly=False, noMatch=None, **kwargs ):
         '''Return a single matching document as the appropriate subclass or None'''
+        # Authorize reading at all
+        if not cls.authorize_pre_read():
+            raise MongoObjectAuthFailed
+
         # if a projection is provided, force the resulting object to be read-only
         readonly = readonly or projection is not None
 
         doc = cls.collection().find_one( filter, projection, **kwargs )
         if doc is not None:
-            return cls.instantiate( doc, readonly=readonly )
-        return None
+            obj = cls.instantiate( doc, readonly=readonly )
+            # Authorize reading this particular document object before returning it
+            if obj.authorize_read():
+                return obj
+        return noMatch
 
 
     @classmethod
@@ -683,11 +766,6 @@ class AccessSingleProxy( AccessDictProxy ):
     Keys must be strings as required by MongoDB documents.
     '''
 
-    def getSubdocContainer( self ):
-        '''For a single subdocument dictionary, the container is the parent document.'''
-        return self.parent
-
-
     @classmethod
     def create( cls, parent, subdoc={}, key=None, autosave=True ):
         '''Add a new single subdocument dictionary to the parent object.
@@ -712,9 +790,23 @@ class AccessSingleProxy( AccessDictProxy ):
         raise Exception( 'single proxy objects do not support getProxies()' )
 
 
+    def getSubdocContainer( self ):
+        '''For a single subdocument dictionary, the container is the parent document.'''
+        return self.parent
 
 
-class MongoSingleProxy( MongoBaseProxy, AccessSingleProxy ):
+    def id( self ):
+        '''Force the subdocument ID for single proxies to "0". We
+        can't use the actual key as we risk exposing the actual
+        dictionary key name.'''
+        return f"{self.parent.id()}{self.ultimateParent.subdocKeySep}0"
+
+
+
+
+
+
+class MongoSingleProxy( AccessSingleProxy, MongoBaseProxy ):
     '''Implement proxy object for a single subdocument dictionary'''
 
     @classmethod

@@ -45,27 +45,29 @@ def getMPMUDClasses( mongo_db ):
     class MyPolymorphicMongoUserDictC( MyPolymorphicMongoUserDictBase ):
         subclassKey = 'C'
 
-    return ( MyPolymorphicMongoUserDictBase,
-             MyPolymorphicMongoUserDictA,
-             MyPolymorphicMongoUserDictB,
-             MyPolymorphicMongoUserDictC )
+    return {
+        'base' : MyPolymorphicMongoUserDictBase,
+        'A' : MyPolymorphicMongoUserDictA,
+        'B' : MyPolymorphicMongoUserDictB,
+        'C' : MyPolymorphicMongoUserDictC
+    }
 
 
 
 @pytest.fixture( scope='class' )
 def getPopulatedMPMUDClasses( getMPMUDClasses, sampleData ):
 
-    (Base, A, B, C) = getMPMUDClasses
+    classes = getMPMUDClasses
 
     # for each entry in the sampleData, save it as a separate polymorphic class
-    a = A( sampleData[0] )
+    a = classes['A']( sampleData[0] )
     a.save()
-    b = B( sampleData[1] )
+    b = classes['B']( sampleData[1] )
     b.save()
-    c = C( sampleData[2] )
+    c = classes['C']( sampleData[2] )
     c.save()
 
-    return (Base, A, B, C)
+    return classes
 
 
 
@@ -116,25 +118,25 @@ class TestPolymorphicBasics:
     def test_subclassMap( self , getPopulatedMPMUDClasses ):
         '''getMPMUDClasses doesn't create a new subclassMap namespace
         Verify that our base class and the module base class subclassMaps are the same'''
-        (Base, A, B, C) = getPopulatedMPMUDClasses
-        assert len( Base.subclassMap ) == 3
-        assert Base.subclassMap == mongo_objects.PolymorphicMongoUserDict.subclassMap
+        classes = getPopulatedMPMUDClasses
+        assert len( classes['base'].subclassMap ) == 3
+        assert classes['base'].subclassMap == mongo_objects.PolymorphicMongoUserDict.subclassMap
 
 
     def test_find_all( self, getPopulatedMPMUDClasses ):
         '''Verify all sample data are returned with the correct class'''
-        (Base, A, B, C) = getPopulatedMPMUDClasses
-        for obj in Base.find():
+        classes = getPopulatedMPMUDClasses
+        for obj in classes['base'].find():
             # match the sample data to the expected classes
             if obj['name'] == 'record 1':
                 assert obj['_sckey'] == 'A'
-                assert isinstance( obj, A )
+                assert isinstance( obj, classes['A'] )
             elif obj['name'] == 'record 2':
                 assert obj['_sckey'] == 'B'
-                assert isinstance( obj, B )
+                assert isinstance( obj, classes['B'] )
             elif obj['name'] == 'record 3':
                 assert obj['_sckey'] == 'C'
-                assert isinstance( obj, C )
+                assert isinstance( obj, classes['C'] )
             else:
                 assert False, 'unexpected sample data subclass'
             # since no project or flag was set, objects should not be readonly
@@ -143,24 +145,24 @@ class TestPolymorphicBasics:
 
     def test_find_single( self, getPopulatedMPMUDClasses ):
         '''Verify a single matching record is returned with the correct class'''
-        (Base, A, B, C) = getPopulatedMPMUDClasses
-        result = list( Base.find( { 'name' : 'record 1'} ) )
+        classes = getPopulatedMPMUDClasses
+        result = list( classes['base'].find( { 'name' : 'record 1'} ) )
         assert len(result) == 1
         assert result[0]['_sckey'] == 'A'
-        assert isinstance( result[0], A )
+        assert isinstance( result[0], classes['A'] )
 
 
     def test_find_none( self, getPopulatedMPMUDClasses ):
         '''Verify a non-matching filter produces an empty result'''
-        (Base, A, B, C) = getPopulatedMPMUDClasses
-        result = list( Base.find( { 'not-a-match' : 'will not return data'} ) )
+        classes = getPopulatedMPMUDClasses
+        result = list( classes['base'].find( { 'not-a-match' : 'will not return data'} ) )
         assert len(result) == 0
 
 
     def test_find_projection_1( self, getPopulatedMPMUDClasses ):
         '''Verify "positive" projection works'''
-        (Base, A, B, C) = getPopulatedMPMUDClasses
-        for obj in Base.find( {}, { 'name' : True } ):
+        classes = getPopulatedMPMUDClasses
+        for obj in classes['base'].find( {}, { 'name' : True } ):
             assert '_id' in obj
             assert '_sckey' not in obj
             assert '_created' not in obj
@@ -172,8 +174,8 @@ class TestPolymorphicBasics:
 
     def test_find_projection_2( self, getPopulatedMPMUDClasses ):
         '''Verify "positive" projection works while suppressing _id"'''
-        (Base, A, B, C) = getPopulatedMPMUDClasses
-        for obj in Base.find( {}, { '_id' : False, 'name' : True } ):
+        classes = getPopulatedMPMUDClasses
+        for obj in classes['base'].find( {}, { '_id' : False, 'name' : True } ):
             assert '_id' not in obj
             assert '_sckey' not in obj
             assert '_created' not in obj
@@ -185,8 +187,8 @@ class TestPolymorphicBasics:
 
     def test_find_projection_3( self, getPopulatedMPMUDClasses ):
         '''Verify "negative" projection works'''
-        (Base, A, B, C) = getPopulatedMPMUDClasses
-        for obj in Base.find( {}, { 'name' : False } ):
+        classes = getPopulatedMPMUDClasses
+        for obj in classes['base'].find( {}, { 'name' : False } ):
             assert '_id' in obj
             assert '_sckey' in obj
             assert '_created' in obj
@@ -198,8 +200,8 @@ class TestPolymorphicBasics:
 
     def test_find_projection_4( self, getPopulatedMPMUDClasses ):
         '''Verify "negative" projection works while suppressing _id'''
-        (Base, A, B, C) = getPopulatedMPMUDClasses
-        for obj in Base.find( {}, { '_id' : False, 'name' : False } ):
+        classes = getPopulatedMPMUDClasses
+        for obj in classes['base'].find( {}, { '_id' : False, 'name' : False } ):
             assert '_id' not in obj
             assert '_sckey' in obj
             assert '_created' in obj
@@ -211,26 +213,26 @@ class TestPolymorphicBasics:
 
     def test_find_readonly( self, getPopulatedMPMUDClasses ):
         '''Verify find() readonly flag'''
-        (Base, A, B, C) = getPopulatedMPMUDClasses
-        for obj in Base.find( readonly=True ):
+        classes = getPopulatedMPMUDClasses
+        for obj in classes['base'].find( readonly=True ):
             assert obj.readonly is True
 
 
     def test_find_one( self, getPopulatedMPMUDClasses ):
         '''Verify a single sample document is returned with the correct class'''
-        (Base, A, B, C) = getPopulatedMPMUDClasses
-        obj = Base.find_one()
+        classes = getPopulatedMPMUDClasses
+        obj = classes['base'].find_one()
 
         # match the sample data to the expected classes
         if obj['name'] == 'record 1':
             assert obj['_sckey'] == 'A'
-            assert isinstance( obj, A )
+            assert isinstance( obj, classes['A'] )
         elif obj['name'] == 'record 2':
             assert obj['_sckey'] == 'B'
-            assert isinstance( obj, B )
+            assert isinstance( obj, classes['B'] )
         elif obj['name'] == 'record 3':
             assert obj['_sckey'] == 'C'
-            assert isinstance( obj, C )
+            assert isinstance( obj, classes['C'] )
         else:
             assert False, 'unexpected sample data subclass'
 
@@ -240,24 +242,36 @@ class TestPolymorphicBasics:
 
     def test_find_one_match( self, getPopulatedMPMUDClasses ):
         '''Verify a single matching record is returned with the correct class'''
-        (Base, A, B, C) = getPopulatedMPMUDClasses
-        obj = Base.find_one( { 'name' : 'record 1'} )
+        classes = getPopulatedMPMUDClasses
+        obj = classes['base'].find_one( { 'name' : 'record 1'} )
         assert obj is not None
         assert obj['_sckey'] == 'A'
-        assert isinstance( obj, A )
+        assert isinstance( obj, classes['A'] )
 
 
     def test_find_one_none( self, getPopulatedMPMUDClasses ):
         '''Verify a non-matching filter produces a None result'''
-        (Base, A, B, C) = getPopulatedMPMUDClasses
-        obj = Base.find_one( { 'not-a-match' : 'will not return data'} )
+        classes = getPopulatedMPMUDClasses
+        obj = classes['base'].find_one( { 'not-a-match' : 'will not return data'} )
         assert obj is None
+
+
+    def test_find_one_none_custom_return( self, getPopulatedMPMUDClasses ):
+        '''Verify a non-matching filter produces our custom "noMatch" result'''
+        classes = getPopulatedMPMUDClasses
+
+        class EmptyResponse( object ):
+            pass
+
+        obj = classes['base'].find_one( { 'not-a-match' : 'will not return data'}, noMatch=EmptyResponse() )
+
+        assert isinstance( obj, EmptyResponse )
 
 
     def test_find_one_projection_1( self, getPopulatedMPMUDClasses ):
         '''Verify "positive" projection works'''
-        (Base, A, B, C) = getPopulatedMPMUDClasses
-        obj = Base.find_one( {}, { 'name' : True } )
+        classes = getPopulatedMPMUDClasses
+        obj = classes['base'].find_one( {}, { 'name' : True } )
         assert '_id' in obj
         assert '_sckey' not in obj
         assert '_created' not in obj
@@ -269,8 +283,8 @@ class TestPolymorphicBasics:
 
     def test_find_one_projection_2( self, getPopulatedMPMUDClasses ):
         '''Verify "positive" projection works while suppressing _id"'''
-        (Base, A, B, C) = getPopulatedMPMUDClasses
-        obj = Base.find_one( {}, { '_id' : False, 'name' : True } )
+        classes = getPopulatedMPMUDClasses
+        obj = classes['base'].find_one( {}, { '_id' : False, 'name' : True } )
         assert '_id' not in obj
         assert '_sckey' not in obj
         assert '_created' not in obj
@@ -282,8 +296,8 @@ class TestPolymorphicBasics:
 
     def test_find_one_projection_3( self, getPopulatedMPMUDClasses ):
         '''Verify "negative" projection works'''
-        (Base, A, B, C) = getPopulatedMPMUDClasses
-        obj = Base.find_one( {}, { 'name' : False } )
+        classes = getPopulatedMPMUDClasses
+        obj = classes['base'].find_one( {}, { 'name' : False } )
         assert '_id' in obj
         assert '_sckey' in obj
         assert '_created' in obj
@@ -295,8 +309,8 @@ class TestPolymorphicBasics:
 
     def test_find_one_projection_4( self, getPopulatedMPMUDClasses ):
         '''Verify "negative" projection works while suppressing _id'''
-        (Base, A, B, C) = getPopulatedMPMUDClasses
-        obj = Base.find_one( {}, { '_id' : False, 'name' : False } )
+        classes = getPopulatedMPMUDClasses
+        obj = classes['base'].find_one( {}, { '_id' : False, 'name' : False } )
         assert '_id' not in obj
         assert '_sckey' in obj
         assert '_created' in obj
@@ -308,44 +322,44 @@ class TestPolymorphicBasics:
 
     def test_find_one_readonly( self, getPopulatedMPMUDClasses ):
         '''Verify find_one() readonly flag'''
-        (Base, A, B, C) = getPopulatedMPMUDClasses
-        obj = Base.find_one( readonly=True )
+        classes = getPopulatedMPMUDClasses
+        obj = classes['base'].find_one( readonly=True )
         assert obj.readonly is True
 
 
     def test_instantiate( self, getPopulatedMPMUDClasses ):
-        (Base, A, B, C) = getPopulatedMPMUDClasses
-        obj = Base.instantiate( { '_sckey' : 'A' } )
-        assert isinstance( obj, A )
+        classes = getPopulatedMPMUDClasses
+        obj = classes['base'].instantiate( { '_sckey' : 'A' } )
+        assert isinstance( obj, classes['A'] )
         assert obj.readonly is False
 
 
     def test_getSubclassByKey( self, getMPMUDClasses ):
-        (Base, A, B, C) = getMPMUDClasses
-        assert Base.getSubclassByKey( 'A' ) == A
+        classes = getMPMUDClasses
+        assert classes['base'].getSubclassByKey( 'A' ) == classes['A']
 
 
     def test_getSubclassFromDoc( self, getMPMUDClasses ):
-        (Base, A, B, C) = getMPMUDClasses
-        assert Base.getSubclassFromDoc( { Base.subclassKeyName : 'A' } ) == A
+        classes = getMPMUDClasses
+        assert classes['base'].getSubclassFromDoc( { classes['base'].subclassKeyName : 'A' } ) == classes['A']
 
 
     def test_instantiate_readonly( self, getPopulatedMPMUDClasses ):
-        (Base, A, B, C) = getPopulatedMPMUDClasses
-        obj = Base.instantiate( { '_sckey' : 'B' }, readonly=True )
-        assert isinstance( obj, B )
+        classes = getPopulatedMPMUDClasses
+        obj = classes['base'].instantiate( { '_sckey' : 'B' }, readonly=True )
+        assert isinstance( obj, classes['B'] )
         assert obj.readonly is True
 
 
     def test_loadProxyById( self, getPopulatedMPMUDClasses ):
         '''Verify find_one() readonly flag'''
-        (Base, A, B, C) = getPopulatedMPMUDClasses
+        classes = getPopulatedMPMUDClasses
 
         # loop through sample objects
-        for source in Base.find():
+        for source in classes['base'].find():
 
             # load the same object with an empty proxy tree
-            result = Base.loadProxyById( source.id() )
+            result = classes['base'].loadProxyById( source.id() )
 
             # verify that the type of the object is correct
             assert type(source) == type(result)
@@ -359,13 +373,13 @@ class TestPolymorphicBasics:
 
     def test_loadProxyById( self, getPopulatedMPMUDClasses ):
         '''Verify find_one() readonly flag'''
-        (Base, A, B, C) = getPopulatedMPMUDClasses
+        classes = getPopulatedMPMUDClasses
 
         # loop through sample objects
-        for source in Base.find():
+        for source in classes['base'].find():
 
             # load the same object with an empty proxy tree
-            result = Base.loadProxyById( source.id(), readonly=True )
+            result = classes['base'].loadProxyById( source.id(), readonly=True )
 
             # verify that the type of the object is correct
             assert type(source) == type(result)
