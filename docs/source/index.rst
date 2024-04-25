@@ -4,14 +4,14 @@ Introduction To mongo_objects
 Overview
 --------
 
-mongo_objects wraps pymongo functionality with new classes to simplify access to MongoDB
+mongo_objects wraps pymongo with new classes to simplify access to MongoDB
 documents and subdocuments.
 
 Documents are returned as user-defined UserDict subclasses, seamlessly linking user code
 with MongoDB data.
 
-Subdocuments are access through user-defined, dictionary-like subclasses that redirect
-all access back to the original parent document.
+Subdocuments are accessed through user-defined, dictionary-like subclasses that proxy
+access back to the original parent document.
 
 
 Installation
@@ -23,32 +23,52 @@ for your Python project.::
     pip install mongo_objects
 
 
-Quickstart
--------------------
+Getting Started
+---------------
 
 Check out the :doc:`quickstart` documentation for a brief overview of document
 and subdocument features.
 
 See the :doc:`sample` code for a working demonstration.
 
+.. toctree::
+   :maxdepth: 2
+
+   quickstart
+   sample
+
 
 MongoDB Documents
 -----------------
 
-* :doc:`MongoUserDict`
+Return your MongoDB documents as customized UserDict subclasses.
+
+.. toctree::
+   :maxdepth: 2
+
+   MongoUserDict
 
 
 Sub-Document Proxies
 --------------------
 
-* :doc:`MongoDictProxy`
-* :doc:`MongoListProxy`
-* :doc:`MongoSingleProxy`
+Manage subdocuments as lightweight dictionary-like proxies back to
+the parent document object.
+
+.. toctree::
+   :maxdepth: 2
+
+   MongoDictProxy
+   MongoListProxy
+   MongoSingleProxy
 
 
 Additional Information
 ----------------------
-* :doc:`customization`
+.. toctree::
+   :maxdepth: 2
+
+   customization
 
 
 Credits
@@ -58,19 +78,6 @@ Development sponsored by `Headwaters Entrepreneurs Pte Ltd <https://headwaters.c
 
 Originally developed by `Frontier Tech Team LLC <https://frontiertechteam.com>`_
 for the `Wasted Minutes <https://wasted-minutes.com>`_ ™️ language study tool.
-
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
-
-   quickstart
-   MongoUserDict
-   MongoDictProxy
-   MongoListProxy
-   MongoSingleProxy
-   sample
-   customization
 
 
 Indices and tables

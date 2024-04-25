@@ -143,3 +143,10 @@ Create a new ticket type. A unique per-document key will be assigned automatical
     } )
 
 
+Credits
+-------
+
+Development sponsored by `Headwaters Entrepreneurs Pte Ltd <https://headwaters.com.sg>`_.
+
+Originally developed by `Frontier Tech Team LLC <https://frontiertechteam.com>`_
+for the `Wasted Minutes <https://wasted-minutes.com>`_ ™️ language study tool.

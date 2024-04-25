@@ -1,5 +1,5 @@
-mongo_objects Quickstart
-=============================
+Quickstart
+========================
 
 MongoDB Documents
 -----------------
