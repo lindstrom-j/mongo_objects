@@ -34,7 +34,7 @@ exit -1
 fi
 
 # create version file
-echo ${VERSION} > src/__about__.py
+echo "__version__ = \"${VERSION}\"" > src/__about__.py
 
 # upgrade all packages
 pip install --upgrade $(pip freeze | awk -F= '{print $1}')
