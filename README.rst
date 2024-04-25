@@ -150,3 +150,8 @@ Development sponsored by `Headwaters Entrepreneurs Pte Ltd <https://headwaters.c
 
 Originally developed by `Frontier Tech Team LLC <https://frontiertechteam.com>`_
 for the `Wasted Minutes <https://wasted-minutes.com>`_ ™️ language study tool.
+
+
+License
+-------
+mongo_objects is made available to the community under the "MIT License".

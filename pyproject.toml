@@ -10,6 +10,7 @@ authors = [
   { name="Jonathan Lindstrom", email="lindstrom.j@headwaters.com.sg" },
 ]
 classifiers = [
+    "Development Status :: 4 - Beta",
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
@@ -19,11 +20,15 @@ dependencies = [
 ]
 description = "Access MongoDB documents and subdocuments through user-defined UserDict and proxy objects."
 dynamic = ["version"]
+keywords = ["Mongo", "MongoDB", "pymongo"]
+license = {text = "MIT License"}
 readme = "README.rst"
 requires-python = ">=3.8"
 
 [project.urls]
-Homepage = "https://headwaters.com.sg/pycon-2023"
+Homepage = "https://github.com/lindstrom-j/mongo_objects"
+Documentation = "https://mongo-objects.headwaters.com.sg/en/latest/"
+Issues = "https://github.com/lindstrom-j/mongo_objects/issues"
 
 [tool.hatch.version]
 path = "src/__about__.py"
