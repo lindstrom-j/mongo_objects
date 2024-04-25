@@ -1,13 +1,13 @@
 alabaster==0.7.16
 attrs==23.2.0
 Babel==2.14.0
-backports.tarfile==1.1.0
+backports.tarfile==1.1.1
 build==1.2.1
 cattrs==23.2.3
 certifi==2024.2.2
 charset-normalizer==3.3.2
 dnspython==2.6.1
-docutils==0.21.1
+docutils==0.21.2
 esbonio==0.16.4
 idna==3.7
 imagesize==1.4.1
@@ -26,11 +26,11 @@ more-itertools==10.2.0
 nh3==0.2.17
 packaging==24.0
 pkginfo==1.10.0
-platformdirs==4.2.0
-pluggy==1.4.0
+platformdirs==4.2.1
+pluggy==1.5.0
 pygls==1.3.1
 Pygments==2.17.2
-pymongo==4.6.3
+pymongo==4.7.0
 pyproject_hooks==1.0.0
 PySocks==1.7.1
 pyspellchecker==0.8.1
@@ -40,6 +40,7 @@ requests==2.31.0
 requests-toolbelt==1.0.0
 rfc3986==2.0.0
 rich==13.7.1
+setuptools==69.5.1
 snowballstemmer==2.2.0
 Sphinx==7.3.7
 sphinxcontrib-applehelp==1.0.8
@@ -50,4 +51,5 @@ sphinxcontrib-qthelp==1.0.7
 sphinxcontrib-serializinghtml==1.1.10
 twine==5.0.0
 urllib3==2.2.1
+wheel==0.43.0
 zipp==3.18.1
