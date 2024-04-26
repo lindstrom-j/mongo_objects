@@ -26,10 +26,13 @@ from pymongo.collection import ReturnDocument
 # Custom exceptions
 ################################################################################
 
-class MongoObjectReadOnly( Exception ):
+class MongoObjectsAuthFailed( Exception ):
     pass
 
-class MongoObjectAuthFailed( Exception ):
+class MongoObjectsDocumentModified( Exception ):
+    pass
+
+class MongoObjectsReadOnly( Exception ):
     pass
 
 
@@ -64,7 +67,7 @@ class MongoUserDict( UserDict ):
 
         # Authorize creating this object prior to returning to the user
         if not self.authorize_init():
-            raise MongoObjectAuthFailed
+            raise MongoObjectsAuthFailed
 
 
     @classmethod
@@ -93,12 +96,14 @@ class MongoUserDict( UserDict ):
     def authorize_init( self ):
         '''Called after the document object is initialized but
         before it is returned to the user.
-        If the return value is not truthy, an exception is raised.'''
+        If the return value is not truthy, a MongoObjectsAuthFailed exception
+        is raised.'''
         return True
 
     def authorize_delete( self ):
         '''Called before the current document is deleted.
-        If the return value is not truthy, an exception is raised.'''
+        If the return value is not truthy, a MongoObjectsAuthFailed
+        exception is raised.'''
         return True
 
     @classmethod
@@ -106,7 +111,8 @@ class MongoUserDict( UserDict ):
         '''Called before a read operation is performed.
         This is a class method as no data has been read and no
         document object has been created.
-        If the return value is not truthy, an exception is raised.'''
+        If the return value is not truthy, a MongoObjectsAuthFailed
+        exception is raised.'''
         return True
 
     def authorize_read( self ):
@@ -123,7 +129,8 @@ class MongoUserDict( UserDict ):
 
     def authorize_save( self ):
         '''Called before the current document is saved.
-        If the return value is not truthy, an exception is raised.'''
+        If the return value is not truthy, a MongoObjectsAuthFailed
+        exception is raised.'''
         return True
 
 
@@ -139,7 +146,7 @@ class MongoUserDict( UserDict ):
         if '_id' in self:
             # Authorize deleting this object
             if not self.authorize_delete():
-                raise MongoObjectAuthFailed
+                raise MongoObjectsAuthFailed
             self.collection().find_one_and_delete( { '_id' : ObjectId( self['_id'] ) } )
             del self['_id']
 
@@ -149,12 +156,14 @@ class MongoUserDict( UserDict ):
         '''Return matching documents as instances of this class'''
         # Authorize reading at all
         if not cls.authorize_pre_read():
-            raise MongoObjectAuthFailed
+            raise MongoObjectsAuthFailed
 
         # if readonly is None, by default force queries with a projection to be read-only
-        # otherwise, accept the (presumably boolean) value provided by the user
+        # otherwise, accept the value provided by the user
         if readonly is None:
             readonly = projection is not None
+        else:
+            readonly = bool( readonly )
 
         # automatically filter by object version if requested
         if cls.object_version is not None:
@@ -172,12 +181,14 @@ class MongoUserDict( UserDict ):
         '''Return a single matching document as an instance of this class or None'''
         # Authorize reading at all
         if not cls.authorize_pre_read():
-            raise MongoObjectAuthFailed
+            raise MongoObjectsAuthFailed
 
         # if readonly is None, by default force queries with a projection to be read-only
-        # otherwise, accept the (presumably boolean) value provided by the user
+        # otherwise, accept the value provided by the user
         if readonly is None:
             readonly = projection is not None
+        else:
+            readonly = bool( readonly )
 
         # automatically filter by object version if requested
         if cls.object_version is not None:
@@ -270,11 +281,11 @@ class MongoUserDict( UserDict ):
 
         # authorize saving this document
         if not self.authorize_save():
-            raise MongoObjectAuthFailed
+            raise MongoObjectsAuthFailed
 
         # refuse to save a read-only document
         if self.readonly:
-            raise MongoObjectReadOnly( f"Can't save readonly object {type(self)} at {id(self)}" )
+            raise MongoObjectsReadOnly( f"Can't save readonly object {type(self)} at {id(self)}" )
 
         # Use a dictionary to record original metadata in case they need to be rolled back
         # These metadata values should never be None, so during rollback we remove any values
@@ -313,7 +324,8 @@ class MongoUserDict( UserDict ):
                     return_document=ReturnDocument.AFTER )
 
                 # on failure, we assume the document has been updated elsewhere and raise an exception
-                assert result is not None, f"document {self.id()} already updated"
+                if result is None:
+                    raise MongoObjectsDocumentModified( f"document {self.id()} already updated" )
 
         # on any error roll back to the original metadata
         except Exception as e:
@@ -378,7 +390,7 @@ class PolymorphicMongoUserDict( MongoUserDict ):
         '''Return matching documents as appropriate subclass instances'''
         # Authorize reading at all
         if not cls.authorize_pre_read():
-            raise MongoObjectAuthFailed
+            raise MongoObjectsAuthFailed
 
         # if a projection is provided, force the resulting object to be read-only
         readonly = readonly or projection is not None
@@ -395,7 +407,7 @@ class PolymorphicMongoUserDict( MongoUserDict ):
         '''Return a single matching document as the appropriate subclass or None'''
         # Authorize reading at all
         if not cls.authorize_pre_read():
-            raise MongoObjectAuthFailed
+            raise MongoObjectsAuthFailed
 
         # if a projection is provided, force the resulting object to be read-only
         readonly = readonly or projection is not None
