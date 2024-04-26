@@ -72,8 +72,8 @@ class MongoUserDict( UserDict ):
 
     @classmethod
     def add_object_version_filter( cls, filter, object_version ):
-        '''Implement automatic object version filtering for find() and find_one()
-        The command-line object-version affects if and how to implement
+        '''Implement automatic object version filtering for find() and find_one().
+        The object-version keyword argument affects if and how to implement
         object version filtering.'''
         if cls.object_version is not None:
             # False suppresses automatic object_version filtering
@@ -839,7 +839,7 @@ class AccessSingleProxy( AccessDictProxy ):
         '''Add a new single subdocument dictionary to the parent object.
         No new key is auto-assigned as single subdocuments are assigned to fixed keys.
         The key can be defined in the class as "container_name"
-        or overriden on the command line as "key".
+        or overriden in the function call as "key".
         Return the new proxy object.
         '''
         if key is None:
