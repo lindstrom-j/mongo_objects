@@ -61,14 +61,14 @@ already been modified in the database.
 See the ``save()`` function reference for more details on this behavior.
 
 ``save()`` updates the ``_updated`` timestamp to the current UTC time for all objects
-successfully saved.::
+successfully saved. ::
 
     event['new-key'] = 'add some content to the object'
     event.save()
 
 Deleting an object is accomplished with the ``delete()`` method. The document is deleted from
 the database and the ObjectId is removed from the in-memory object. If the object is
-saved again, it will be treated as a new document.::
+saved again, it will be treated as a new document. ::
 
     event.delete()
 
@@ -216,19 +216,94 @@ For example, to update the layout of the object defined above::
 Polymorphism
 ------------
 
+Subclass the ``PolymorphicMongoUserDict`` class to enable ``mongo_objects`` support
+for polymorphic user document classes. Specifically, from the same MongoDB collection
+``find()`` and ``find_one()`` will return instances of different document classes.
+
+Each polymorphic subclass defines a separate key which ``save()`` adds to the document.
+When the document is read back from the database, the key is compared to a list of
+potential classes and the correct instance type returned. ::
+
+    import mongo_objects
+
+    # create a base class for the collection
+    class Event( mongo_objects.PolymorphicMongoUserDict ):
+        db = ...          # provide your MongoDB database object here
+        collection_name = 'events'
+
+        # Recommended: define an empty subclass_map in the base class
+        # This creates a separate namespace for the polymorphic
+        # subclass keys.
+        # Otherwise, subclasses will share the PolymorphicMongoUserDict
+        # subclass namespace and risk collisions with other subclasses
+        # from other collections.
+        subclass_map = {}
+
+        .. your generally useful event functions ...
+
+    # now create subclasses for each object variation
+    # each subclass requires a unique key
+    class OnSiteEvent( Event ):
+        suclass_key = 'onsite'
+
+        .. your onsite-specific event functions ...
+
+    class OnlineEvent( Event ):
+        suclass_key = 'online'
+
+        .. your online-specific event functions ...
+
+    class HybridEvent( Event ):
+        suclass_key = 'hybrid'
+
+        .. your hybrid-specific event functions ...
+
+Create and save the objects using the subclasses. ``save()`` automatically
+adds the appropriate subclass key to the document. ::
+
+    hybrid = HybridEvent()
+    hybrid.save()
+    # save the document ID for later
+    hybridId = hybrid.id()
+
+Load documents from the base class. The resulting object will be an instance
+of the correct subclass based on the subclass key. ::
+
+    # event is an instance of HybridEvent
+    event = Event.load_by_id( hybridId )
+
+If the document has a missing or invalid subclass key, an instance of the
+base class is returned.
+
+
 Proxy Support
 -------------
 
-Advanced Considerations
------------------------
+``MongoUserDict`` seamlessly supports the subdocument proxy objects also
+included in this module.
 
-.. Overriding separator or key
+``get_unique_integer()`` provides per-document unique integer values().
 
-Method Reference
+``get_unique_key()`` uses these unique integers to create unique string
+values suitable for subdocument proxy keys.
+
+``split_id()`` separates a full subdocument ID value into its components:
+a parent document ObjectId plus one or more proxy keys.
+
+``load_proxy_by_id()`` accepts a subdocument ID and a list of one or more
+proxy classes. The parent document is loaded and the proxy objects are
+instantiated. See ``MongoDictProxy`` and ``MongoListProxy`` for more
+details.
+
+
+Class Reference
 ----------------
 
-..
-    save():
-    if the ``_updated``
-    timestamp in the current object matches the ``_updated`` timestamp in the database. A
-    ``MongoObjectsDocumentModified`` exception is raised if the ``_updated`` timestamps don't match.
+.. currentmodule:: mongo_objects
+.. autoclass:: MongoUserDict
+    :special-members: __init__
+    :members:
+
+.. autoclass:: PolymorphicMongoUserDict
+    :special-members: __init__
+    :members:

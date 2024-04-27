@@ -31,7 +31,7 @@ Documentation = "https://mongo-objects.headwaters.com.sg/en/latest/"
 Issues = "https://github.com/lindstrom-j/mongo_objects/issues"
 
 [tool.hatch.version]
-path = "src/__about__.py"
+path = "docs/source/conf.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mongo_objects.py"]

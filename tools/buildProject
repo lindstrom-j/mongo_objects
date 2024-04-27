@@ -33,8 +33,16 @@ echo "Tag ${VERSION} is not a version tag"
 exit -1
 fi
 
+# get the documentation version
+DOC_VERSION=$(PYTHONPATH="docs/source" python3 -c "import conf; print(conf.version)")
+if [[ "v${DOC_VERSION}" != "$VERSION" ]]
+then
+echo "Documentation version ${DOC_VERSION} does not match code version ${VERSION}"
+exit -1
+fi
+
 # create version file
-echo "__version__ = \"${VERSION}\"" > src/__about__.py
+echo "__version__ = \"${VERSION#v}\"" > src/__about__.py
 
 # upgrade all packages
 pip install --upgrade $(pip freeze | awk -F= '{print $1}')
