@@ -216,7 +216,7 @@ class TestVersionedSaveException:
         obj = MMUD( { 1 : "not valid BSON"} )
         assert '_objver' not in obj
 
-        # saving the object will raise an exceptionsave the object and verify the version was added to the document
+        # saving the object will raise an exception
         with pytest.raises( Exception ):
             obj.save()
 
@@ -426,7 +426,7 @@ class TestSave:
 
         # try to save second object; it won't work
         original_updated = obj2.get('_updated')
-        with pytest.raises( Exception ):
+        with pytest.raises( mongo_objects.MongoObjectsDocumentModified ):
             obj2.save()
 
         # verify that obj2 _updated is the original value
@@ -444,7 +444,7 @@ class TestSave:
         assert result.readonly is True
 
         # saving a readonly document produces an exception
-        with pytest.raises( Exception ):
+        with pytest.raises( mongo_objects.MongoObjectsReadOnly ):
             result.save()
 
 
@@ -458,7 +458,7 @@ class TestSave:
         original = dict( obj )
 
         # verify saving a document without authorization produces an exception
-        with pytest.raises( mongo_objects.MongoObjectAuthFailed ):
+        with pytest.raises( mongo_objects.MongoObjectsAuthFailed ):
             obj.save()
 
         # verify nothing was saved
@@ -522,7 +522,7 @@ class TestDelete:
         count = LocalMMUD.collection().count_documents( {} )
 
         # verify deleting a document without authorization produces an exception
-        with pytest.raises( mongo_objects.MongoObjectAuthFailed ):
+        with pytest.raises( mongo_objects.MongoObjectsAuthFailed ):
             obj.delete()
 
         # verify the database document count hasn't changed
@@ -568,7 +568,7 @@ class TestBasics:
                 return False
 
         # verify initializing a document without authorization produces an exception
-        with pytest.raises( mongo_objects.MongoObjectAuthFailed ):
+        with pytest.raises( mongo_objects.MongoObjectsAuthFailed ):
             obj = LocalMMUD( sampleData[0] )
 
 
@@ -804,7 +804,7 @@ class TestBasics:
 
         # verify reading documents without pre-read authorization produces an exception
         # must convert to a list or the generator is never called
-        with pytest.raises( mongo_objects.MongoObjectAuthFailed ):
+        with pytest.raises( mongo_objects.MongoObjectsAuthFailed ):
             list( LocalMMUD.find() )
 
 
@@ -1003,7 +1003,7 @@ class TestBasics:
                 return False
 
         # verify reading a document without pre-read authorization produces an exception
-        with pytest.raises( mongo_objects.MongoObjectAuthFailed ):
+        with pytest.raises( mongo_objects.MongoObjectsAuthFailed ):
             LocalMMUD.find_one()
 
 

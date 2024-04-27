@@ -100,7 +100,7 @@ class TestInitSubclass:
 
 
     def test_init_subclass_duplicate_key( self ):
-        with pytest.raises( Exception ):
+        with pytest.raises( mongo_objects.MongoObjectsSubclassError ):
 
             class MyTestClassBase( mongo_objects.PolymorphicMongoUserDict ):
                 # create our own local testing namespace
