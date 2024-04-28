@@ -48,35 +48,32 @@ class MongoUserDict( UserDict ):
     """
     Access MongoDB documents through user-defined UserDict subclasses.
 
-    User classes must provide:
-    :param collection_name: name of the MongoDB collection where the documents are stored
-    :param database: pymongo database connection object
-
-    Optional:
-    :param object_version: set a non-None value to enable document object schema versioning
-
+    User classes must provide `collection_name` and `database` or override
+    the :func:`collection()` function to return the correct pymongo collection object.
     """
-    # Subclasses can provide a collection name and a MongoDb database connection
-    # as a class attribute OR override collection() to return the correct collection object
+
+    #: override with the name of the MongoDB collection where the documents are stored
     collection_name = None
+
+    #: override with the pymongo database connection object
     database = None
 
-    # If object_version is non-None, find() and find_one() by default restrict queries
-    # to documents with the current object_version
-    # This enables a type of schema versioning.
+    #: Optional: If object_version is not``None``, :func:`find()` and :func:`find_one()`
+    #: by default restrict queries to documents with the current `object_version`.
+    #: This enables a type of schema versioning.
     object_version = None
 
-    # The character sequence used to separate the document ID from proxy subdocument keys
-    # This may be overriden but it is the user's responsibility to guarantee that this
-    # sequence will never appear in any ID or subdoc key.
-    # Since the default IDs and subdoc keys are hex, 'g' is a safe separator
+    #: The character sequence used to separate the document ID from proxy subdocument keys.
+    #: This may be overriden but it is the user's responsibility to guarantee that this
+    #: sequence will never appear in any ID or subdoc key.
+    #: Since the default IDs and subdoc keys are hex, ``g`` is a safe, default separator
     subdoc_key_sep = 'g'
 
 
     def __init__( self, doc={}, readonly=False ):
         """
         Initialize the custom UserDict object
-        Flag readonly objects appropriately
+        flagging readonly objects appropriately.
         """
         super().__init__( doc )
         self.readonly = readonly
@@ -89,7 +86,7 @@ class MongoUserDict( UserDict ):
     @classmethod
     def add_object_version_filter( cls, filter, object_version ):
         """
-        Implement automatic object version filtering for find() and find_one().
+        Implement automatic object version filtering for ``find()`` and ``find_one()`.
         The object-version keyword argument affects if and how to implement
         object version filtering.
 
@@ -116,13 +113,13 @@ class MongoUserDict( UserDict ):
     def authorize_init( self ):
         """Called after the document object is initialized but
         before it is returned to the user.
-        If the return value is not truthy, a MongoObjectsAuthFailed exception
+        If the return value is not truthy, a ``MongoObjectsAuthFailed`` exception
         is raised."""
         return True
 
     def authorize_delete( self ):
         """Called before the current document is deleted.
-        If the return value is not truthy, a MongoObjectsAuthFailed
+        If the return value is not truthy, a ``MongoObjectsAuthFailed``
         exception is raised."""
         return True
 
@@ -131,7 +128,7 @@ class MongoUserDict( UserDict ):
         """Called before a read operation is performed.
         This is a class method as no data has been read and no
         document object has been created.
-        If the return value is not truthy, a MongoObjectsAuthFailed
+        If the return value is not truthy, a ``MongoObjectsAuthFailed``
         exception is raised."""
         return True
 
@@ -141,33 +138,33 @@ class MongoUserDict( UserDict ):
         If the return value is not truthy, the data will
         not be returned.
 
-        Note that find_one() only inspects the first document
-        returned by the underlying MongoDB find_one() call. If the
+        Note that ``find_one()`` only inspects the first document
+        returned by the underlying ``pymongo.find_one()`` call. If the
         document returned does not pass authorization, no attempt is
         made to locate another matching document."""
         return True
 
     def authorize_save( self ):
         """Called before the current document is saved.
-        If the return value is not truthy, a MongoObjectsAuthFailed
+        If the return value is not truthy, a ``MongoObjectsAuthFailed``
         exception is raised."""
         return True
 
 
     @classmethod
     def collection( cls ):
-        """Return the collection object from the active database for the named collection
+        """Return the ``pymongo`` collection object from the active database for the named collection
 
-        For complex situations users may omit the `database` and `connection_name`
+        For complex situations users may omit the ``database`` and ``connection_name``
         attributes when defining the class and instead override this function.
 
-        This function must return a pymongo collection object."""
+        This function must return a ``pymongo`` collection object."""
         return cls.database.get_collection( cls.collection_name )
 
 
     def delete( self ):
-        """Delete the current object
-        Remove the id so save() will know this is a new object if we try to re-save."""
+        """Delete the current object.
+        Remove the id so ``save()`` will know this is a new object if we try to re-save."""
         if '_id' in self:
             # Authorize deleting this object
             if not self.authorize_delete():
@@ -295,21 +292,24 @@ class MongoUserDict( UserDict ):
 
 
     def save( self, force=False ):
-        """Intelligent wrapper to insert or replace a document
+        """
+        Intelligent wrapper to insert or replace a document
 
         A current `_updated` timestamp is added to all documents.
 
         The first time a document is saved, a `_created` timestamp is added as well.
 
-        If the class defines a non-None `object_version`, this added as `_objver` to
+        If the class defines a non-``None`` `object_version`, this added as `_objver` to
         the document as well.
 
-        1) Documents without an `_id` are `insert()`-ed into the database; MongoDB will assign the ID
-        2) If :param force: is set, document will be saved regardless of update time or even if it exists.
-            This is useful for upserting document from another database.
+        1) Documents without an `_id` are inserted into the database; MongoDB will assign the ID
+        2) If `force` is set, document will be saved regardless of update time or even if it exists.
+           This is useful for upserting document from another database.
         3) Otherwise, only a document with this `_id` and `_updated` timestamp will be replaced.
-            This protects against overwriting documents that have been updated elsewhere.
+           This protects against overwriting documents that have been updated elsewhere.
 
+        :param force: if ``True``, upsert the new document regardless of its ``_updated`` timestamp
+        :type force: bool, optional
         """
 
         # internal class to note if a metadata field has added and had no original value
@@ -385,7 +385,7 @@ class MongoUserDict( UserDict ):
     @staticmethod
     def utcnow():
         """MongoDB stores milliseconds, not microseconds.
-        Drop microseconds from the standard utcnow() so database time comparisons will work."""
+        Drop microseconds from the standard utcnow() so comparisons can be made with database times."""
         now = datetime.utcnow()
         return now.replace( microsecond=(now.microsecond // 1000) * 1000 )
 
