@@ -6,6 +6,12 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+import os
+import sys
+
+# add module source directory to the path
+sys.path.append(os.path.abspath('../../src') )
+
 project = 'mongo_objects'
 copyright = '2024, Jonathan Lindstrom'
 author = 'Jonathan Lindstrom'

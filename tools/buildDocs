@@ -1,6 +1,9 @@
 #!/usr/bin/env zsh
 #
 # Build the Sphinx documentation
+#
+# The Sphinx conf.py file adds the module source directory to sys.path
+# so no need to add it here
 
 # locate the project directory; assume it is the directory above this script
 # assume this script is in the "tools" subdirectory; change to project directory
@@ -10,9 +13,6 @@ PROJECT_DIR=$(pwd)
 # activate the project virtual environment
 source ${PROJECT_DIR}/venv/bin/activate
 echo "activating virtual environment"
-
-# add the source code to the Python path so autodoc can find it
-export PYTHONPATH=src
 
 # use Sphinx to build the documents
 sphinx-build -M html docs/source/ docs/build/
