@@ -58,6 +58,7 @@ the parent document object.
 .. toctree::
    :maxdepth: 2
 
+   proxy_overview
    MongoDictProxy
    MongoListProxy
    MongoSingleProxy

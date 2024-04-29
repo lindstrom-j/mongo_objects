@@ -667,9 +667,9 @@ class PolymorphicMongoUserDict( MongoUserDict ):
 ################################################################################
 
 class MongoBaseProxy( object ):
-    """Intended for interal use. Base of all other proxy objects"""
+    """Base of all other proxy objects. Not intended to be directly subclassed."""
 
-    # Users must override this to provide the name of the dictionary or list container
+    #: Users must override this to provide the name of the dictionary or list container
     container_name = None
 
 
@@ -695,10 +695,15 @@ class MongoBaseProxy( object ):
 
     @classmethod
     def create_key( cls, parent ):
-        """Create a unique key value for this subdocument.
+        """
+        Create a unique key value for this subdocument.
         The default implementation requests a hex string for the next unique integer
         as saved in the ultimate MongoUserDict parent object.
-        Users may override this using data from the subdoc or other methods to generate a unique key."""
+
+        Users may override this using data from the subdoc or other methods to generate a unique key.
+        It is recommended that the key not be changed once the object is created as it
+        will invalidate any existing proxies and any subdocument_id strings.
+        """
         return getattr( parent, 'ultimate_parent', parent ).get_unique_key( autosave=False )
 
 
@@ -732,6 +737,9 @@ class MongoBaseProxy( object ):
 
 
     def save( self ):
+        """Saving the subdocument means saving the parent object,
+        so we simply pass the save request up the line.
+        """
         return self.parent.save()
 
 
@@ -746,7 +754,7 @@ class PolymorphicMongoBaseProxy( MongoBaseProxy ):
 
     Each subclass needs to define a unique proxy_subclass_key
 
-    Parent objects need to call instantiate() to create the correct subclass type"""
+    Parent objects need to call get_proxy() to obtain the correct subclass type"""
 
     # Map proxy_subclass_keys to subclasses
     # Override this with an empty dictionary in the base class
@@ -851,10 +859,20 @@ class AccessDictProxy( object ):
 
 
     def get_subdoc( self ):
+        """
+        Reference the subdocument dictionary in the parent object
+
+        :meta private:
+        """
         return self.get_subdoc_container()[ self.key ]
 
 
     def get_subdoc_container( self ):
+        """
+        Reference the container dictionary in the parent object
+
+        :meta private:
+        """
         return self.parent.get( self.container_name, {} )
 
 
@@ -865,8 +883,7 @@ class MongoDictProxy( MongoBaseProxy, AccessDictProxy ):
 
     @classmethod
     def get_proxy( cls, parent, key ):
-        """Return a single proxy object. For non-polymorphic use,
-        this simply calls __init__()"""
+        """Return a single proxy object by calling :func:`__init__()`"""
         return cls( parent, key )
 
 
@@ -877,8 +894,8 @@ class PolymorphicMongoDictProxy( PolymorphicMongoBaseProxy, AccessDictProxy ):
 
     @classmethod
     def get_proxy( cls, parent, key ):
-        """Return a single proxy object. For PolymorphicMongoDictProxy,
-        determine the correct subclass type and call __init__()"""
+        """Return a single polymorphic proxy object.
+        Determines the correct subclass type and call __init__()"""
         # use an anonymous base-class proxy to get access to the subdocument
         # so that get_subclass_from_doc can inspect the data and determine the
         # appropriate subclass.
@@ -965,7 +982,11 @@ class AccessListProxy( object ):
 
     @classmethod
     def get_key( cls, subdoc ):
-        """Extract the key from a subdocument dictionary."""
+        """
+        Get the key from a subdocument dictionary.
+
+        :meta private:
+        """
         return subdoc[ cls.subdoc_key_name ]
 
 
@@ -975,6 +996,11 @@ class AccessListProxy( object ):
 
 
     def get_subdoc( self ):
+        """
+        Reference the subdocument dictionary in the parent object
+
+        :meta private:
+        """
         # We don't want to iterate the list each time looking for the subdoc that matches
         # EAFTP: If the document at self.seq is a match, return it
         # Otherwise, scan the list for a match.
@@ -992,12 +1018,21 @@ class AccessListProxy( object ):
 
 
     def get_subdoc_container( self ):
+        """
+        Reference the container list in the parent object
+
+        :meta private:
+        """
         return self.parent.get( self.container_name, [] )
 
 
     @classmethod
     def set_key( cls, subdoc, key ):
-        """Set the key in a subdocument dictionary."""
+        """
+        Set the key in a subdocument dictionary
+
+        :meta private:
+        """
         subdoc[ cls.subdoc_key_name ] = key
 
 
