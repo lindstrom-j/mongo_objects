@@ -52,10 +52,11 @@ class MongoUserDict( UserDict ):
     the :func:`collection()` function to return the correct pymongo collection object.
     """
 
-    #: override with the name of the MongoDB collection where the documents are stored
+    #: Required: override with the name of the MongoDB collection
+    #: where the documents are stored
     collection_name = None
 
-    #: override with the pymongo database connection object
+    #: Required: override with the pymongo database connection object
     database = None
 
     #: Optional: If object_version is not``None``, :func:`find()` and :func:`find_one()`
@@ -74,7 +75,11 @@ class MongoUserDict( UserDict ):
         """
         Initialize the custom UserDict object
         flagging readonly objects appropriately.
+
+        :raises MongoObjectsAuthFailed: if `authorize_init()` has been overriden
+          and does not return a truthy value
         """
+
         super().__init__( doc )
         self.readonly = readonly
 
@@ -113,14 +118,27 @@ class MongoUserDict( UserDict ):
     def authorize_init( self ):
         """Called after the document object is initialized but
         before it is returned to the user.
-        If the return value is not truthy, a ``MongoObjectsAuthFailed`` exception
-        is raised."""
+
+        This hook is called when creating a new object and during calls to
+        :func:`find` and :func:`find_one`.
+
+        Override this function and return ``False`` to block creating
+        this document.
+
+        :returns: Whether creating the current document is authorized (default ``True``)
+        :rtype: bool
+        """
         return True
 
     def authorize_delete( self ):
         """Called before the current document is deleted.
-        If the return value is not truthy, a ``MongoObjectsAuthFailed``
-        exception is raised."""
+
+        Override this function and return ``False`` to block deleting
+        this document.
+
+        :returns: Whether deleting the current document is authorized (default ``True``)
+        :rtype: bool
+        """
         return True
 
     @classmethod
@@ -128,8 +146,10 @@ class MongoUserDict( UserDict ):
         """Called before a read operation is performed.
         This is a class method as no data has been read and no
         document object has been created.
-        If the return value is not truthy, a ``MongoObjectsAuthFailed``
-        exception is raised."""
+
+        :returns: Whether reading any documents is authorized (default ``True``)
+        :rtype: bool
+        """
         return True
 
     def authorize_read( self ):
@@ -141,30 +161,44 @@ class MongoUserDict( UserDict ):
         Note that ``find_one()`` only inspects the first document
         returned by the underlying ``pymongo.find_one()`` call. If the
         document returned does not pass authorization, no attempt is
-        made to locate another matching document."""
+        made to locate another matching document.
+
+        :returns: Whether reading the current document is authorized (default ``True``)
+        :rtype: bool
+        """
         return True
 
     def authorize_save( self ):
         """Called before the current document is saved.
-        If the return value is not truthy, a ``MongoObjectsAuthFailed``
-        exception is raised."""
+
+        :returns: Whether saving the current document is authorized (default ``True``)
+        :rtype: bool
+        """
         return True
 
 
     @classmethod
     def collection( cls ):
-        """Return the ``pymongo`` collection object from the active database for the named collection
+        """Return the :class:`pymongo.Collection` object
+        from the active database for the named collection
 
-        For complex situations users may omit the ``database`` and ``connection_name``
+        For complex situations users may omit the *database* and *connection_name*
         attributes when defining the class and instead override this function.
 
-        This function must return a ``pymongo`` collection object."""
+        This function must return a :class:`pymongo.Collection` object.
+        """
+
         return cls.database.get_collection( cls.collection_name )
 
 
     def delete( self ):
         """Delete the current object.
-        Remove the id so ``save()`` will know this is a new object if we try to re-save."""
+        Remove the id so :func:`.save()` will know this is a new object if we try to re-save.
+
+        :raises MongoObjectsAuthFailed: if `authorize_delete()` has been overriden
+          and does not return a truthy value
+        """
+
         if '_id' in self:
             # Authorize deleting this object
             if not self.authorize_delete():
@@ -177,11 +211,29 @@ class MongoUserDict( UserDict ):
     def find( cls, filter={}, projection=None, readonly=None, object_version=None, **kwargs ):
         """Return matching documents as instances of this class
 
-        `filter`, `projection` and `**kwargs` are passed to `pymongo.find()`
+        :param dict filter: Updated with *cls.object_version* as appropriate
+          and passed to :func:`pymongo.find`
+        :param dict projection: Passed to :func:`pymongo.find`
+        :param readonly:
 
-        `readonly` can be one of three values:
-        None (default): object from queries with projections are marked readonly; other objects are ma
+          1) If ``None`` and a projection is provided, mark the objects as readonly.
+          2) If ``None`` and no projection is given, consider the objects read-write.
+          3) If ``True``, mark the objects as readonly regardless of the projection.
+          4) If ``False``, consider the objects read-write regardless of the projection.
+
+        :type readonly: ``None`` or *bool*
+        :param object_version: Only if *cls.object_version* is not ``None``, implement object schema versioning.
+
+          1) If ``None``, update the filter to only return documents with the current *cls.object_version* value
+          2) If ``False``, don't filter objects by *cls.object_version*
+          3) For any other value, update the filter to only return documents with the given *object_version*
+
+        :type object_version: ``None``, ``False``, any scalar value
+        :returns: a generator for instances of the user-defined :class:`MongoUserDict` subclass
+        :raises MongoObjectsAuthFailed: if `authorize_pre_read()` has been overriden
+          and does not return a truthy value
         """
+
         # Authorize reading at all
         if not cls.authorize_pre_read():
             raise MongoObjectsAuthFailed
@@ -206,7 +258,19 @@ class MongoUserDict( UserDict ):
 
     @classmethod
     def find_one( cls, filter={}, projection=None, readonly=None, object_version=None, no_match=None, **kwargs ):
-        """Return a single matching document as an instance of this class or None"""
+        """
+        Return a single matching document as an instance of this class or None
+
+        :param filter: as with :func:`.find`
+        :param projection: as with :func:`.find`
+        :param readonly: as with :func:`.find`
+        :param object_version: as with :func:`.find`
+        :param no_match: Value to return if no matching document is found
+        :type no_match: ``None`` or any value
+        :returns: *no_match* value; ``None`` by default
+        :raises MongoObjectsAuthFailed: if `authorize_pre_read()` has been overriden
+          and does not return a truthy value
+        """
         # Authorize reading at all
         if not cls.authorize_pre_read():
             raise MongoObjectsAuthFailed
@@ -233,9 +297,16 @@ class MongoUserDict( UserDict ):
 
     def get_unique_integer( self, autosave=True ):
         """Provide the next unique integer for this document.
+
         These integers are convenient for use as keys of subdocuments.
-        Start with 1; 0 is reserved for single proxy documents which don't have a key.
-        By default, the document is saved."""
+        Starts with 1; 0 is reserved for single proxy documents which don't have a key.
+
+        :param autosave: Should the document be saved after the next
+          unique integer is issued
+        :type autosave: bool
+        :returns: The next unique integer for this document
+        :rtype: int
+        """
 
         # migrate existing _lastUniqueInteger objects to _last_unique_integer
         if '_lastUniqueInteger' in self:
@@ -250,32 +321,58 @@ class MongoUserDict( UserDict ):
 
 
     def get_unique_key( self, autosave=True ):
-        """Format the next unique integer as a hexidecimal string"""
+        """Format the next unique integer as a hexidecimal string
+
+        :param autosave: passed to :func:`get_unique_integer`
+        :type autosave: bool
+        :returns: The lowercase hexidecimal string representing the
+          next unique integer for this document.
+        :rtype: str
+        """
         return f"{self.get_unique_integer( autosave ):x}"
 
 
     def id( self ):
-        """Convert this document's database ID to a string"""
+        """Convert this document's ObjectId to a string
+
+        :return: The document ObjectId
+        :rtype: str
+        :raises KeyError: if the document has not yet been saved
+          and has not been assigned an ObjectId
+        """
         return str( self['_id'] )
 
 
     @classmethod
     def load_by_id( cls, doc_id, **kwargs ):
-        """Locate a document by its database ID"""
+        """Locate a document by its ObjectId
+
+        :param doc_id: the ObjectId for the desired document
+        :type doc_id: `str` or `bson.ObjectId`
+        :param kwargs: passed to :func:`.find_one`
+        :returns: an instance of the current class
+        """
         return cls.find_one( { '_id' : ObjectId( doc_id ) }, **kwargs )
 
 
     @classmethod
     def load_proxy_by_id( cls, id, *args, readonly=False ):
-        """Based on a subdocument ID and a list of classes, load the Mongo parent
-        documents, create any intermediate proxies and return the requested
-        proxy object.
+        """Based on a full subdocument ID string and a list of classes,
+        load the Mongo parent document, create any intermediate proxies
+        and return the requested proxy object.
 
-        id is a subdocument ID string separated by subdoc_key_sep. It includes the
-        ObjectId of the top-level MongoDB document
-
-        args is a list of proxy objects in descending order. It does not include
-        the top-level MongoUserDict class"""
+        :param id: a full subdocument ID string separated by `cls.subdoc_key_sep`.
+          It includes the ObjectId of the top-level MongoDB document and
+          one or more subdocument keys.
+        :type id: str
+        :param args: one or more user-defined proxy classes in descending order,
+          one per subdocument key. The top-level parent :class:`MongoUserDict`
+          subclass is not included.
+        :param readonly: passed to :func:`find_one`
+        :type readonly: bool
+        :returns: an instance of the final, rightmost proxy subdocument class
+          from *args*
+        """
 
         # split the subdocument_id into its components
         ids = cls.split_id( id )
@@ -302,14 +399,17 @@ class MongoUserDict( UserDict ):
         If the class defines a non-``None`` `object_version`, this added as `_objver` to
         the document as well.
 
-        1) Documents without an `_id` are inserted into the database; MongoDB will assign the ID
+        1) Documents without an `_id` are inserted into the database; MongoDB will assign the ObjectId
         2) If `force` is set, document will be saved regardless of update time or even if it exists.
-           This is useful for upserting document from another database.
-        3) Otherwise, only a document with this `_id` and `_updated` timestamp will be replaced.
+           This is useful for upserting documents from another database.
+        3) Otherwise, only a database document whose `_id` and `_updated` timestamp
+           match this object will be replaced.
            This protects against overwriting documents that have been updated elsewhere.
 
-        :param force: if ``True``, upsert the new document regardless of its ``_updated`` timestamp
+        :param force: if ``True``, upsert the new document regardless of its `_updated` timestamp
         :type force: bool, optional
+        :raises MongoObjectsAuthFailed: if `authorize_save()` has been overriden
+          and does not return a truthy value
         """
 
         # internal class to note if a metadata field has added and had no original value
@@ -378,14 +478,26 @@ class MongoUserDict( UserDict ):
 
     @classmethod
     def split_id( cls, subdoc_id ):
-        """Split a subdocument ID into its component document ID and one or more subdocument keys."""
+        """Split a subdocument ID into its component document ID and one or more subdocument keys.
+
+        :param subdoc_id: a full subdocument ID starting with a document ObjectId
+          followed by one or more subdocument proxy keys separated by `cls.subdoc_key_sep`.
+        :type subdoc_id: str
+        :returns: A list. The first element of the list is the document ObjectId.
+          The remaining elements in the list are subdocument proxy keys.
+        :rtype: list
+        """
         return subdoc_id.split( cls.subdoc_key_sep )
 
 
     @staticmethod
     def utcnow():
         """MongoDB stores milliseconds, not microseconds.
-        Drop microseconds from the standard utcnow() so comparisons can be made with database times."""
+        Drop microseconds from the standard utcnow() so comparisons can be made with database times.
+
+        :returns: The current time with microseconds set to 0.
+        :rtype: naive :class:`datetime.datetime`
+        """
         now = datetime.utcnow()
         return now.replace( microsecond=(now.microsecond // 1000) * 1000 )
 
@@ -396,23 +508,28 @@ class PolymorphicMongoUserDict( MongoUserDict ):
 
     Each subclass needs to define a unique subclass_key"""
 
-    # Map subclass_keys to subclasses
-    # Override this with an empty dictionary in the base class
-    # of your subclass tree to create a separate namespace
+    #: Map subclass_keys to subclasses
+    #:
+    #: Recommended: Override this with an empty dictionary in the base class
+    #: of your subclass tree to create a separate namespace
     subclass_map = {}
 
-    # Must be unique and non-None for each subclass
-    # Base classes may define this key as well
+    #: Must be unique and non-None for each subclass
+    #: Base classes may define this key as well
     subclass_key = None
 
-    # Name of internal key added to each document to record the subclass_key
+    #: Optional. Name of internal key added to each document to record the subclass_key
     subclass_key_name = '_sckey'
 
 
 
     @classmethod
     def __init_subclass__( cls, **kwargs):
-        """auto-register every PolymorphicMongoUserDict subclass"""
+        """auto-register every PolymorphicMongoUserDict subclass
+
+        :raises MongoObjectsSubclassError: If a *subclass_key* is duplicated
+        """
+
         super().__init_subclass__(**kwargs)
         try:
             if getattr( cls, 'subclass_key', None ) is not None:
@@ -423,14 +540,34 @@ class PolymorphicMongoUserDict( MongoUserDict ):
 
 
     @classmethod
-    def find( cls, filter={}, projection=None, readonly=None, **kwargs ):
-        """Return matching documents as appropriate subclass instances"""
+    def find( cls, filter={}, projection=None, readonly=None, object_version=None, **kwargs ):
+        """
+        Return matching documents as appropriate subclass instances
+
+        :param filter: as with :func:`MongoUserDict.find`
+        :param projection: as with :func:`MongoUserDict.find`
+        :param readonly: as with :func:`MongoUserDict.find`
+        :param object_version: as with :func:`MongoUserDict.find`
+        :returns: a generator for instances of the user-defined :class:`PolymorphicMongoUserDict` subclasses,
+          each correct for the document being returned
+        :raises MongoObjectsAuthFailed: if `authorize_pre_read()` has been overriden
+          and does not return a truthy value
+        """
+
         # Authorize reading at all
         if not cls.authorize_pre_read():
             raise MongoObjectsAuthFailed
 
-        # if a projection is provided, force the resulting object to be read-only
-        readonly = readonly or projection is not None
+        # if readonly is None, by default force queries with a projection to be read-only
+        # otherwise, accept the value provided by the user
+        if readonly is None:
+            readonly = projection is not None
+        else:
+            readonly = bool( readonly )
+
+        # automatically filter by object version if requested
+        if cls.object_version is not None:
+            filter = cls.add_object_version_filter( filter, object_version )
 
         for doc in cls.collection().find( filter, projection, **kwargs ):
             obj = cls.instantiate(doc, readonly=readonly)
@@ -440,14 +577,35 @@ class PolymorphicMongoUserDict( MongoUserDict ):
 
 
     @classmethod
-    def find_one( cls, filter={}, projection=None, readonly=None, no_match=None, **kwargs ):
-        """Return a single matching document as the appropriate subclass or None"""
+    def find_one( cls, filter={}, projection=None, readonly=None, object_version=None, no_match=None, **kwargs ):
+        """
+        Return a single matching document as the appropriate subclass or None
+
+        :param filter: as with :func:`MongoUserDict.find`
+        :param projection: as with :func:`MongoUserDict.find`
+        :param readonly: as with :func:`MongoUserDict.find`
+        :param object_version: as with :func:`MongoUserDict.find`
+        :param no_match: as with :func:`MongoUserDict.find_one`
+        :returns: an instance of the user-defined :class:`PolymorphicMongoUserDict` subclass
+          correct for this document
+        :raises MongoObjectsAuthFailed: if `authorize_pre_read()` has been overriden
+          and does not return a truthy value
+        """
+
         # Authorize reading at all
         if not cls.authorize_pre_read():
             raise MongoObjectsAuthFailed
 
-        # if a projection is provided, force the resulting object to be read-only
-        readonly = readonly or projection is not None
+        # if readonly is None, by default force queries with a projection to be read-only
+        # otherwise, accept the value provided by the user
+        if readonly is None:
+            readonly = projection is not None
+        else:
+            readonly = bool( readonly )
+
+        # automatically filter by object version if requested
+        if cls.object_version is not None:
+            filter = cls.add_object_version_filter( filter, object_version )
 
         doc = cls.collection().find_one( filter, projection, **kwargs )
         if doc is not None:
@@ -461,7 +619,10 @@ class PolymorphicMongoUserDict( MongoUserDict ):
     @classmethod
     def get_subclass_by_key( cls, subclass_key ):
         """Look up a subclass in the subclass_map by its subclass_key
-        If the subclass can't be located, return the base class"""
+        If the subclass can't be located, return the base class
+
+        :meta private:
+        """
         return cls.subclass_map.get( subclass_key, cls )
 
 
@@ -469,14 +630,20 @@ class PolymorphicMongoUserDict( MongoUserDict ):
     def get_subclass_from_doc( cls, doc ):
         """Return the correct subclass to represent this document.
         If the document doesn't contain a subclass_key_name value or the value
-        doesn't exist in the subclass_map, return the base class"""
+        doesn't exist in the subclass_map, return the base class
+
+        :meta private:
+        """
         return cls.get_subclass_by_key( doc.get( cls.subclass_key_name ) )
 
 
     @classmethod
     def instantiate( cls, doc, readonly=False ):
         """Instantiate a PolymorphicMongoUserDict subclass based on the content
-        of the provided MongoDB document"""
+        of the provided MongoDB document
+
+        :meta private:
+        """
         # Looks like a bug but isn't
         # The first function call determines the correct subclass
         # The second function call populates a new UserDict subclass with data from the document
@@ -484,7 +651,10 @@ class PolymorphicMongoUserDict( MongoUserDict ):
 
 
     def save( self, **kwargs ):
-        """Add the subclass_key and save the document"""
+        """Add the `subclass_key` to the document and call :func:`MongoUserDict.save`
+
+        :param kwargs: passes to :func:`MongoUserDict.save`
+        """
         if self.subclass_key is not None:
             self[ self.subclass_key_name ] = self.subclass_key
         return super().save( **kwargs )
@@ -667,7 +837,8 @@ class AccessDictProxy( object ):
     def delete( self, autosave=True ):
         """Delete the subdocument from the container dictionary.
         Remove the key so the proxy can't be referenced again.
-        By default save the parent document"""
+        By default save the parent document.
+        """
         del self.get_subdoc_container()[ self.key ]
         if autosave:
             self.parent.save()
