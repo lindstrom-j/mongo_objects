@@ -536,7 +536,7 @@ class PolymorphicMongoUserDict( MongoUserDict ):
                 assert cls.subclass_key not in cls.subclass_map, f"duplicate subclass_key for {type(cls)}"
                 cls.subclass_map[ cls.subclass_key ] = cls
         except Exception as e:
-            raise MongoObjectsSubclassError( 'PolymorphicMongoUserDict(): unable to register subclass' ) from e
+            raise MongoObjectsSubclassError( f"PolymorphicMongoUserDict(): unable to register subclass: {e!s}" ) from e
 
 
     @classmethod
@@ -770,7 +770,7 @@ class PolymorphicMongoBaseProxy( MongoBaseProxy ):
                 assert cls.proxy_subclass_key not in cls.proxy_subclass_map, f"duplicate proxy_subclass_key for {type(cls)}"
                 cls.proxy_subclass_map[ cls.proxy_subclass_key ] = cls
         except Exception as e:
-            raise MongoObjectsSubclassError( 'PolymorphicMongoBaseProxy(): unable to register subclass' ) from e
+            raise MongoObjectsSubclassError( f"PolymorphicMongoBaseProxy(): unable to register subclass: {e!s}" ) from e
 
 
     @classmethod

@@ -16,7 +16,7 @@ import secrets
 
 @pytest.fixture( scope='class' )
 def getMMUDBaseClass( mongo_db ):
-    '''Return a MongoUserDict configured for a per-class unique collection'''
+    """Return a MongoUserDict configured for a per-class unique collection"""
 
     class MyMongoUserDict( mongo_objects.MongoUserDict ):
         collection_name = secrets.token_hex(6)

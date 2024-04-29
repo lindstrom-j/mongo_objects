@@ -30,7 +30,7 @@ def sampleData():
 
 @pytest.fixture( scope='class' )
 def getMPMUDClasses( mongo_db ):
-    '''Return a set of PolymorphicMongoUserDict classes configured for a per-test-class unique collection'''
+    """Return a set of PolymorphicMongoUserDict classes configured for a per-test-class unique collection"""
 
     class MyPolymorphicMongoUserDictBase( mongo_objects.PolymorphicMongoUserDict ):
         collection_name = secrets.token_hex(6)
@@ -71,8 +71,174 @@ def getPopulatedMPMUDClasses( getMPMUDClasses, sampleData ):
 
 
 
+@pytest.fixture( scope='class' )
+def getVersionedMPMUDClasses( mongo_db ):
+    """Return a set of PolymorphicMongoUserDict classes configured for a per-test-class unique collection"""
+
+    class MyPolymorphicMongoUserDictBase( mongo_objects.PolymorphicMongoUserDict ):
+        collection_name = secrets.token_hex(6)
+        database = mongo_db
+        # set a separate subclass_map so these versioned classes don't interfere
+        # with the other non-versioned equivalents with identical keys
+        subclass_map = {}
+        object_version = 1
+
+    class MyPolymorphicMongoUserDictA( MyPolymorphicMongoUserDictBase ):
+        subclass_key = 'A'
+
+    class MyPolymorphicMongoUserDictB( MyPolymorphicMongoUserDictBase ):
+        subclass_key = 'B'
+
+    class MyPolymorphicMongoUserDictC( MyPolymorphicMongoUserDictBase ):
+        subclass_key = 'C'
+
+    return {
+        'base' : MyPolymorphicMongoUserDictBase,
+        'A' : MyPolymorphicMongoUserDictA,
+        'B' : MyPolymorphicMongoUserDictB,
+        'C' : MyPolymorphicMongoUserDictC
+    }
+
+
+
+@pytest.fixture( scope='class' )
+def getVersionedPopulatedMPMUDClasses( getVersionedMPMUDClasses, sampleData ):
+    """Like getPopulatedMPMUDClass except each document is saved
+    with a different version number.
+    """
+
+    classes = getVersionedMPMUDClasses
+
+    # for each entry in the sampleData, save it as a separate polymorphic class
+    classes['base'].object_version = 1
+    a = classes['A']( sampleData[0] )
+    a.save()
+
+    classes['base'].object_version = 2
+    b = classes['B']( sampleData[1] )
+    b.save()
+
+    classes['base'].object_version = 3
+    c = classes['C']( sampleData[2] )
+    c.save()
+
+    return classes
+
+
+
+
+class TestVersioning:
+    """Test how various function perform with object versioning"""
+
+    def test_find_all_current_version( self, getVersionedPopulatedMPMUDClasses ):
+        classes = getVersionedPopulatedMPMUDClasses
+
+        # verify there is a current object version
+        assert classes['base'].object_version is not None
+
+        # There should only be one document at the current version (the default query)
+        result = list( classes['base'].find() )
+        assert len( result ) == 1
+        assert result[0]['_objver'] == classes['base'].object_version
+
+
+    def test_find_all_specified_version( self, getVersionedPopulatedMPMUDClasses ):
+        classes = getVersionedPopulatedMPMUDClasses
+
+        # verify there is a current object version
+        assert classes['base'].object_version is not None
+
+        # There should only be one document at version 1
+        result = list( classes['base'].find( object_version=1 ) )
+        assert len( result ) == 1
+        assert result[0]['_objver'] == 1
+
+
+    def test_find_all_versioning_suppressed( self, getVersionedPopulatedMPMUDClasses, sampleData ):
+        classes = getVersionedPopulatedMPMUDClasses
+
+        # verify there is a current object version
+        assert classes['base'].object_version is not None
+
+        # All documents should be returned if object versioning is suppressed
+        result = list( classes['base'].find( object_version=False ) )
+        assert len( result ) == len( sampleData )
+
+
+    def test_find_all_nonexistent_version( self, getVersionedPopulatedMPMUDClasses ):
+        classes = getVersionedPopulatedMPMUDClasses
+
+        # verify there is a current object version
+        assert classes['base'].object_version is not None
+
+        # Nothing should be returned at a non-existent version
+        result = list( classes['base'].find( object_version=10000000 ) )
+        assert len( result ) == 0
+
+
+    def test_find_one_current_version( self, getVersionedPopulatedMPMUDClasses, sampleData ):
+        classes = getVersionedPopulatedMPMUDClasses
+
+        # verify there is a current object version
+        assert classes['base'].object_version is not None
+
+        # There should only be one document at the current version (the default query)
+        matches = 0
+        for doc in sampleData:
+            filter = dict( doc )
+            result = classes['base'].find_one( filter )
+            if result is not None:
+                assert result['_objver'] == classes['base'].object_version
+                matches += 1
+
+        assert matches == 1
+
+
+    def test_find_one_specified_version( self, getVersionedPopulatedMPMUDClasses, sampleData ):
+        classes = getVersionedPopulatedMPMUDClasses
+
+        # verify there is a current object version
+        assert classes['base'].object_version is not None
+
+        # There should only be one document at version 1
+        matches = 0
+        for doc in sampleData:
+            filter = dict( doc )
+            result = classes['base'].find_one( filter, object_version=1 )
+            if result is not None:
+                assert result['_objver'] == 1
+                matches += 1
+
+        assert matches == 1
+
+
+    def test_find_one_versioning_suppressed( self, getVersionedPopulatedMPMUDClasses, sampleData ):
+        classes = getVersionedPopulatedMPMUDClasses
+
+        # verify there is a current object version
+        assert classes['base'].object_version is not None
+
+        # Any document may be returned if object versioning is suppressed
+        for doc in sampleData:
+            filter = dict( doc )
+            assert classes['base'].find_one( filter, object_version=False ) is not None
+
+
+    def test_find_one_nonexistent_version( self, getVersionedPopulatedMPMUDClasses, sampleData ):
+        classes = getVersionedPopulatedMPMUDClasses
+
+        # verify there is a current object version
+        assert classes['base'].object_version is not None
+
+        # None should be returned at a non-existent version for any document
+        for doc in sampleData:
+            filter = dict( doc )
+            assert classes['base'].find_one( filter, object_version=10000000 ) is None
+
+
+
 class TestInitSubclass:
-    '''Test __init_subclass__ permutations'''
+    """Test __init_subclass__ permutations"""
 
     def test_init_subclass( self ):
         class MyTestClassBase( mongo_objects.PolymorphicMongoUserDict ):
@@ -116,15 +282,15 @@ class TestInitSubclass:
 
 class TestPolymorphicBasics:
     def test_subclass_map( self , getPopulatedMPMUDClasses ):
-        '''getMPMUDClasses doesn't create a new subclass_map namespace
-        Verify that our base class and the module base class subclass_maps are the same'''
+        """getMPMUDClasses doesn't create a new subclass_map namespace
+        Verify that our base class and the module base class subclass_maps are the same"""
         classes = getPopulatedMPMUDClasses
         assert len( classes['base'].subclass_map ) == 3
         assert classes['base'].subclass_map == mongo_objects.PolymorphicMongoUserDict.subclass_map
 
 
     def test_find_all( self, getPopulatedMPMUDClasses ):
-        '''Verify all sample data are returned with the correct class'''
+        """Verify all sample data are returned with the correct class"""
         classes = getPopulatedMPMUDClasses
         for obj in classes['base'].find():
             # match the sample data to the expected classes
@@ -144,7 +310,7 @@ class TestPolymorphicBasics:
 
 
     def test_find_single( self, getPopulatedMPMUDClasses ):
-        '''Verify a single matching record is returned with the correct class'''
+        """Verify a single matching record is returned with the correct class"""
         classes = getPopulatedMPMUDClasses
         result = list( classes['base'].find( { 'name' : 'record 1'} ) )
         assert len(result) == 1
@@ -153,14 +319,14 @@ class TestPolymorphicBasics:
 
 
     def test_find_none( self, getPopulatedMPMUDClasses ):
-        '''Verify a non-matching filter produces an empty result'''
+        """Verify a non-matching filter produces an empty result"""
         classes = getPopulatedMPMUDClasses
         result = list( classes['base'].find( { 'not-a-match' : 'will not return data'} ) )
         assert len(result) == 0
 
 
     def test_find_projection_1( self, getPopulatedMPMUDClasses ):
-        '''Verify "positive" projection works'''
+        """Verify "positive" projection works"""
         classes = getPopulatedMPMUDClasses
         for obj in classes['base'].find( {}, { 'name' : True } ):
             assert '_id' in obj
@@ -173,7 +339,7 @@ class TestPolymorphicBasics:
 
 
     def test_find_projection_2( self, getPopulatedMPMUDClasses ):
-        '''Verify "positive" projection works while suppressing _id"'''
+        """Verify "positive" projection works while suppressing _id"""
         classes = getPopulatedMPMUDClasses
         for obj in classes['base'].find( {}, { '_id' : False, 'name' : True } ):
             assert '_id' not in obj
@@ -186,7 +352,7 @@ class TestPolymorphicBasics:
 
 
     def test_find_projection_3( self, getPopulatedMPMUDClasses ):
-        '''Verify "negative" projection works'''
+        """Verify "negative" projection works"""
         classes = getPopulatedMPMUDClasses
         for obj in classes['base'].find( {}, { 'name' : False } ):
             assert '_id' in obj
@@ -199,7 +365,7 @@ class TestPolymorphicBasics:
 
 
     def test_find_projection_4( self, getPopulatedMPMUDClasses ):
-        '''Verify "negative" projection works while suppressing _id'''
+        """Verify "negative" projection works while suppressing _id"""
         classes = getPopulatedMPMUDClasses
         for obj in classes['base'].find( {}, { '_id' : False, 'name' : False } ):
             assert '_id' not in obj
@@ -212,14 +378,14 @@ class TestPolymorphicBasics:
 
 
     def test_find_readonly( self, getPopulatedMPMUDClasses ):
-        '''Verify find() readonly flag'''
+        """Verify find() readonly flag"""
         classes = getPopulatedMPMUDClasses
         for obj in classes['base'].find( readonly=True ):
             assert obj.readonly is True
 
 
     def test_find_one( self, getPopulatedMPMUDClasses ):
-        '''Verify a single sample document is returned with the correct class'''
+        """Verify a single sample document is returned with the correct class"""
         classes = getPopulatedMPMUDClasses
         obj = classes['base'].find_one()
 
@@ -241,7 +407,7 @@ class TestPolymorphicBasics:
 
 
     def test_find_one_match( self, getPopulatedMPMUDClasses ):
-        '''Verify a single matching record is returned with the correct class'''
+        """Verify a single matching record is returned with the correct class"""
         classes = getPopulatedMPMUDClasses
         obj = classes['base'].find_one( { 'name' : 'record 1'} )
         assert obj is not None
@@ -250,14 +416,14 @@ class TestPolymorphicBasics:
 
 
     def test_find_one_none( self, getPopulatedMPMUDClasses ):
-        '''Verify a non-matching filter produces a None result'''
+        """Verify a non-matching filter produces a None result"""
         classes = getPopulatedMPMUDClasses
         obj = classes['base'].find_one( { 'not-a-match' : 'will not return data'} )
         assert obj is None
 
 
     def test_find_one_none_custom_return( self, getPopulatedMPMUDClasses ):
-        '''Verify a non-matching filter produces our custom "no_match" result'''
+        """Verify a non-matching filter produces our custom "no_match" result"""
         classes = getPopulatedMPMUDClasses
 
         class EmptyResponse( object ):
@@ -269,7 +435,7 @@ class TestPolymorphicBasics:
 
 
     def test_find_one_projection_1( self, getPopulatedMPMUDClasses ):
-        '''Verify "positive" projection works'''
+        """Verify "positive" projection works"""
         classes = getPopulatedMPMUDClasses
         obj = classes['base'].find_one( {}, { 'name' : True } )
         assert '_id' in obj
@@ -282,7 +448,7 @@ class TestPolymorphicBasics:
 
 
     def test_find_one_projection_2( self, getPopulatedMPMUDClasses ):
-        '''Verify "positive" projection works while suppressing _id"'''
+        """Verify "positive" projection works while suppressing _id"""
         classes = getPopulatedMPMUDClasses
         obj = classes['base'].find_one( {}, { '_id' : False, 'name' : True } )
         assert '_id' not in obj
@@ -295,7 +461,7 @@ class TestPolymorphicBasics:
 
 
     def test_find_one_projection_3( self, getPopulatedMPMUDClasses ):
-        '''Verify "negative" projection works'''
+        """Verify "negative" projection works"""
         classes = getPopulatedMPMUDClasses
         obj = classes['base'].find_one( {}, { 'name' : False } )
         assert '_id' in obj
@@ -308,7 +474,7 @@ class TestPolymorphicBasics:
 
 
     def test_find_one_projection_4( self, getPopulatedMPMUDClasses ):
-        '''Verify "negative" projection works while suppressing _id'''
+        """Verify "negative" projection works while suppressing _id"""
         classes = getPopulatedMPMUDClasses
         obj = classes['base'].find_one( {}, { '_id' : False, 'name' : False } )
         assert '_id' not in obj
@@ -321,7 +487,7 @@ class TestPolymorphicBasics:
 
 
     def test_find_one_readonly( self, getPopulatedMPMUDClasses ):
-        '''Verify find_one() readonly flag'''
+        """Verify find_one() readonly flag"""
         classes = getPopulatedMPMUDClasses
         obj = classes['base'].find_one( readonly=True )
         assert obj.readonly is True
@@ -352,7 +518,7 @@ class TestPolymorphicBasics:
 
 
     def test_load_proxy_by_id( self, getPopulatedMPMUDClasses ):
-        '''Verify find_one() readonly flag'''
+        """Verify find_one() readonly flag"""
         classes = getPopulatedMPMUDClasses
 
         # loop through sample objects
@@ -372,7 +538,7 @@ class TestPolymorphicBasics:
 
 
     def test_load_proxy_by_id( self, getPopulatedMPMUDClasses ):
-        '''Verify find_one() readonly flag'''
+        """Verify find_one() readonly flag"""
         classes = getPopulatedMPMUDClasses
 
         # loop through sample objects

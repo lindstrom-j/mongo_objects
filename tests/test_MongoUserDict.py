@@ -31,7 +31,7 @@ def sampleData():
 
 @pytest.fixture( scope='class' )
 def getMMUDClass( mongo_db ):
-    '''Return a MongoUserDict configured for a per-class unique collection'''
+    """Return a MongoUserDict configured for a per-class unique collection"""
 
     class MyMongoUserDict( mongo_objects.MongoUserDict ):
         collection_name = secrets.token_hex(6)
@@ -56,10 +56,10 @@ def getPopulatedMMUDClass( getMMUDClass, sampleData ):
 
 @pytest.fixture( scope='class' )
 def getVersionedPopulatedMMUDClass( getMMUDClass, sampleData ):
-    '''Like getPopulatedMMUDClass except each document is saved
+    """Like getPopulatedMMUDClass except each document is saved
     with a different version number.
 
-    MMUD is left with the final object version number.'''
+    MMUD is left with the final object version number."""
 
     MMUD = getMMUDClass
 
@@ -73,7 +73,7 @@ def getVersionedPopulatedMMUDClass( getMMUDClass, sampleData ):
 
 
 class TestVersioning:
-    '''Test how various function perform with object versioning'''
+    """Test how various function perform with object versioning"""
 
     def test_find_all_current_version( self, getVersionedPopulatedMMUDClass ):
         MMUD = getVersionedPopulatedMMUDClass
@@ -226,14 +226,14 @@ class TestVersionedSaveException:
 
 
 class TestSave:
-    '''Test various permutations of MongoUserDict.save()
-    Other functionality is tested in a separate class'''
+    """Test various permutations of MongoUserDict.save()
+    Other functionality is tested in a separate class"""
 
     def test_save( self, getMMUDClass, sampleData ):
-        '''Verify a basic dictionary is saved properly.
+        """Verify a basic dictionary is saved properly.
         Confirm original object is updated with time and ID
         and that data is stored as expected in the database.
-        '''
+        """
 
         MMUD = getMMUDClass
 
@@ -283,7 +283,7 @@ class TestSave:
 
 
     def test_save_exception_1( self, getMMUDClass ):
-        '''Test that an exception saving a new document removes _created, _updated timestamps'''
+        """Test that an exception saving a new document removes _created, _updated timestamps"""
         MMUD = getMMUDClass
 
         # count documents
@@ -313,7 +313,7 @@ class TestSave:
 
 
     def test_save_exception_2( self, getMMUDClass ):
-        '''Test that an exception saving a previously saved document leaves the _updated timestamp unchanged'''
+        """Test that an exception saving a previously saved document leaves the _updated timestamp unchanged"""
         MMUD = getMMUDClass
 
         # count documents
@@ -399,7 +399,7 @@ class TestSave:
 
 
     def test_save_overwrite( self, getMMUDClass, sampleData ):
-        '''Test attempting to save over an already-updated object'''
+        """Test attempting to save over an already-updated object"""
         MMUD = getMMUDClass
 
         # count documents
@@ -438,7 +438,7 @@ class TestSave:
 
 
     def test_save_readonly( self, getPopulatedMMUDClass ):
-        '''Test attempting to save a readonly object'''
+        """Test attempting to save a readonly object"""
         MMUD = getPopulatedMMUDClass
         result = MMUD.find_one( readonly=True )
         assert result.readonly is True
@@ -449,7 +449,7 @@ class TestSave:
 
 
     def test_save_no_auth( self, getPopulatedMMUDClass ):
-        '''Test attempting to save a document without authorization'''
+        """Test attempting to save a document without authorization"""
         class LocalMMUD( getPopulatedMMUDClass):
             def authorize_save( self ):
                 return False
@@ -468,7 +468,7 @@ class TestSave:
 
 
 class TestDelete:
-    '''Test MongoUserDict.delete() in its own database'''
+    """Test MongoUserDict.delete() in its own database"""
 
     def test_delete( self, getMMUDClass, sampleData ):
         MMUD = getMMUDClass
@@ -491,7 +491,7 @@ class TestDelete:
 
 
     def test_delete_new( self, getMMUDClass, sampleData ):
-        '''Delete an object that was never saved. This should be a no-op'''
+        """Delete an object that was never saved. This should be a no-op"""
         MMUD = getMMUDClass
 
         # create but don't save the first record
@@ -511,7 +511,7 @@ class TestDelete:
 
 
     def test_delete_no_auth( self, getPopulatedMMUDClass ):
-        '''Test attempting to delete a document without authorization'''
+        """Test attempting to delete a document without authorization"""
         class LocalMMUD( getPopulatedMMUDClass):
             def authorize_delete( self ):
                 return False
@@ -532,7 +532,7 @@ class TestDelete:
 
 
 class TestBasics:
-    '''Test all other functionality of MongoUserDict'''
+    """Test all other functionality of MongoUserDict"""
 
     def test_init( self, getMMUDClass, sampleData ):
         MMUD = getMMUDClass
@@ -573,8 +573,8 @@ class TestBasics:
 
 
     def test_add_object_version( self ):
-        '''Verify add_object_version adds the correct filter
-        The original filter should be left intact.'''
+        """Verify add_object_version adds the correct filter
+        The original filter should be left intact."""
         class LocalClass( mongo_objects.MongoUserDict ):
             object_version = 5
 
@@ -599,9 +599,9 @@ class TestBasics:
 
 
     def test_add_object_version_empty( self ):
-        '''Verify add_object_version() if the class has no object version
+        """Verify add_object_version() if the class has no object version
         Since the class has no object version, no filter should be
-        added under any circumstances'''
+        added under any circumstances"""
         class LocalClass( mongo_objects.MongoUserDict ):
             pass
 
@@ -676,7 +676,7 @@ class TestBasics:
 
 
     def test_find_single( self, getPopulatedMMUDClass, sampleData ):
-        '''Use a filter to find a single record, in this case, the first sample by name'''
+        """Use a filter to find a single record, in this case, the first sample by name"""
         MMUD = getPopulatedMMUDClass
 
         # verify that this is an unversioned test
@@ -693,7 +693,7 @@ class TestBasics:
 
 
     def test_find_projection_1( self, getPopulatedMMUDClass ):
-        '''Test find() with a "positive" projection'''
+        """Test find() with a "positive" projection"""
         MMUD = getPopulatedMMUDClass
 
         # verify that this is an unversioned test
@@ -711,7 +711,7 @@ class TestBasics:
 
 
     def test_find_projection_2( self, getPopulatedMMUDClass ):
-        '''Test find() with a "positive" projection but suppress _id'''
+        """Test find() with a "positive" projection but suppress _id"""
         MMUD = getPopulatedMMUDClass
 
         # verify that this is an unversioned test
@@ -729,7 +729,7 @@ class TestBasics:
 
 
     def test_find_projection_3( self, getPopulatedMMUDClass ):
-        '''Test find() with a "negative" projection'''
+        """Test find() with a "negative" projection"""
         MMUD = getPopulatedMMUDClass
 
         # verify that this is an unversioned test
@@ -747,7 +747,7 @@ class TestBasics:
 
 
     def test_find_projection_4( self, getPopulatedMMUDClass ):
-        '''Test find() with a "negative" projection and suppress _id'''
+        """Test find() with a "negative" projection and suppress _id"""
         MMUD = getPopulatedMMUDClass
 
         # verify that this is an unversioned test
@@ -765,7 +765,7 @@ class TestBasics:
 
 
     def test_find_projection_5( self, getPopulatedMMUDClass ):
-        '''Test find() with a "negative" projection with readonly forced to False'''
+        """Test find() with a "negative" projection with readonly forced to False"""
         MMUD = getPopulatedMMUDClass
 
         # verify that this is an unversioned test
@@ -796,7 +796,7 @@ class TestBasics:
 
 
     def test_find_no_pre_auth( self, getPopulatedMMUDClass ):
-        '''Test attempting to read without pre-authorization'''
+        """Test attempting to read without pre-authorization"""
         class LocalMMUD( getPopulatedMMUDClass ):
             @classmethod
             def authorize_pre_read( cls ):
@@ -809,7 +809,7 @@ class TestBasics:
 
 
     def test_find_no_auth_1( self, getPopulatedMMUDClass ):
-        '''Test attempting to read without authorization'''
+        """Test attempting to read without authorization"""
         class LocalMMUD( getPopulatedMMUDClass):
             def authorize_read( self ):
                 return False
@@ -820,7 +820,7 @@ class TestBasics:
 
 
     def test_find_no_auth_2( self, getPopulatedMMUDClass ):
-        '''Test attempting to read without authorization for certain objects'''
+        """Test attempting to read without authorization for certain objects"""
 
         # first collect a list of object IDs
         ids = [ x.id() for x in getPopulatedMMUDClass.find() ]
@@ -840,7 +840,7 @@ class TestBasics:
 
 
     def test_find_one( self, getPopulatedMMUDClass ):
-        '''Test returning a single (random) object'''
+        """Test returning a single (random) object"""
         MMUD = getPopulatedMMUDClass
 
         # verify that this is an unversioned test
@@ -857,7 +857,7 @@ class TestBasics:
 
 
     def test_find_one_none( self, getPopulatedMMUDClass ):
-        '''Verify a non-matching filter produces a None result'''
+        """Verify a non-matching filter produces a None result"""
         MMUD = getPopulatedMMUDClass
 
         # verify that this is an unversioned test
@@ -870,7 +870,7 @@ class TestBasics:
 
 
     def test_find_one_none_custom_return( self, getPopulatedMMUDClass ):
-        '''Verify a non-matching filter produces our custom "no_match" result'''
+        """Verify a non-matching filter produces our custom "no_match" result"""
         MMUD = getPopulatedMMUDClass
 
         # verify that this is an unversioned test
@@ -885,7 +885,7 @@ class TestBasics:
 
 
     def test_find_one_filter( self, getPopulatedMMUDClass, sampleData ):
-        '''Use a filter to find a specific single record, in this case, the third sample by name'''
+        """Use a filter to find a specific single record, in this case, the third sample by name"""
         MMUD = getPopulatedMMUDClass
 
         # verify that this is an unversioned test
@@ -898,7 +898,7 @@ class TestBasics:
 
 
     def test_find_one_projection_1( self, getPopulatedMMUDClass ):
-        '''Test find() with a "positive" projection'''
+        """Test find() with a "positive" projection"""
         MMUD = getPopulatedMMUDClass
 
         # verify that this is an unversioned test
@@ -916,7 +916,7 @@ class TestBasics:
 
 
     def test_find_one_projection_2( self, getPopulatedMMUDClass ):
-        '''Test find() with a "positive" projection but suppress _id'''
+        """Test find() with a "positive" projection but suppress _id"""
         MMUD = getPopulatedMMUDClass
 
         # verify that this is an unversioned test
@@ -934,7 +934,7 @@ class TestBasics:
 
 
     def test_find_one_projection_3( self, getPopulatedMMUDClass ):
-        '''Test find() with a "negative" projection'''
+        """Test find() with a "negative" projection"""
         MMUD = getPopulatedMMUDClass
 
         # verify that this is an unversioned test
@@ -952,7 +952,7 @@ class TestBasics:
 
 
     def test_find_one_projection_4( self, getPopulatedMMUDClass ):
-        '''Test find() with a "negative" projection and suppress _id'''
+        """Test find() with a "negative" projection and suppress _id"""
         MMUD = getPopulatedMMUDClass
 
         # verify that this is an unversioned test
@@ -970,7 +970,7 @@ class TestBasics:
 
 
     def test_find_one_projection_5( self, getPopulatedMMUDClass ):
-        '''Test find() with a "negative" projection with readonly forced to False'''
+        """Test find() with a "negative" projection with readonly forced to False"""
         MMUD = getPopulatedMMUDClass
 
         # verify that this is an unversioned test
@@ -996,7 +996,7 @@ class TestBasics:
 
 
     def test_find_one_no_pre_auth( self, getPopulatedMMUDClass ):
-        '''Test attempting to read without pre-authorization'''
+        """Test attempting to read without pre-authorization"""
         class LocalMMUD( getPopulatedMMUDClass ):
             @classmethod
             def authorize_pre_read( cls ):
@@ -1008,7 +1008,7 @@ class TestBasics:
 
 
     def test_find_one_no_auth( self, getPopulatedMMUDClass ):
-        '''Test attempting to read without authorization'''
+        """Test attempting to read without authorization"""
         class LocalMMUD( getPopulatedMMUDClass):
             def authorize_read( self ):
                 return False

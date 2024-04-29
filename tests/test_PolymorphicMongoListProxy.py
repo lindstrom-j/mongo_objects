@@ -14,7 +14,7 @@ import secrets
 
 @pytest.fixture( scope='class' )
 def getMPMUDClasses( mongo_db ):
-    '''Return a set of polymorphic MongoUserDict classes configured for a per-test-class unique collection'''
+    """Return a set of polymorphic MongoUserDict classes configured for a per-test-class unique collection"""
 
     class MyMongoUserDict( mongo_objects.MongoUserDict ):
         collection_name = secrets.token_hex(6)
@@ -142,7 +142,7 @@ def getSampleProxyA1( getPopulatedMPMUDClasses, getSampleProxyA ):
 
 
 class TestInitSubclass:
-    '''Test __init_subclass__ permutations'''
+    """Test __init_subclass__ permutations"""
 
     def test_init_subclass( self ):
         class MyTestClassBase( mongo_objects.PolymorphicMongoListProxy ):
@@ -323,9 +323,9 @@ class TestCreate:
 
 class TestPolymorphicBasics:
     def test_subclass_map( self , getPopulatedMPMUDClasses ):
-        '''getMPMUDClasses create a new proxy_subclass_map namespace for each proxy base class
+        """getMPMUDClasses create a new proxy_subclass_map namespace for each proxy base class
         Verify the keys in the proxy_subclass map
-        Verify the base class proxy_subclass map is empty'''
+        Verify the base class proxy_subclass map is empty"""
         classes = getPopulatedMPMUDClasses
         assert len( mongo_objects.PolymorphicMongoListProxy.proxy_subclass_map ) == 0
         assert sorted( classes['A'].proxy_subclass_map ) == ['Aa', 'Ab', 'Ac']
@@ -334,10 +334,10 @@ class TestPolymorphicBasics:
 
 
     def test_get_proxy( self, getPopulatedMPMUDClasses, getSampleParent ):
-        '''Test accessing both first-level and second-level proxies
+        """Test accessing both first-level and second-level proxies
 
         For testing convenience, the keys of the getPopulatedMPMUDClasses dictionary
-        match the proxy_subclass_key for each subclass'''
+        match the proxy_subclass_key for each subclass"""
         classes = getPopulatedMPMUDClasses
         parent = getSampleParent
 
@@ -373,10 +373,10 @@ class TestPolymorphicBasics:
 
 
     def test_get_proxy_by_sequence( self, getPopulatedMPMUDClasses, getSampleParent ):
-        '''Test accessing both first-level and second-level proxies
+        """Test accessing both first-level and second-level proxies
 
         For testing convenience, the keys of the getPopulatedMPMUDClasses dictionary
-        match the proxy_subclass_key for each subclass'''
+        match the proxy_subclass_key for each subclass"""
         classes = getPopulatedMPMUDClasses
         parent = getSampleParent
 

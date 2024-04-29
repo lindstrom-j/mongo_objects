@@ -14,9 +14,9 @@ import secrets
 
 @pytest.fixture( scope='class' )
 def getMPMUDClasses( mongo_db ):
-    '''Return a set of polymorphic MongoUserDict classes configured for a per-test-class unique collection
+    """Return a set of polymorphic MongoUserDict classes configured for a per-test-class unique collection
 
-    Since each class is only used once per object, we can predefine the container_name'''
+    Since each class is only used once per object, we can predefine the container_name"""
 
     class MyMongoUserDict( mongo_objects.MongoUserDict ):
         collection_name = secrets.token_hex(6)
@@ -148,13 +148,13 @@ def getSampleParent( getPopulatedMPMUDClasses ):
 
 @pytest.fixture( scope='class' )
 def getSampleProxyAKey():
-    '''Return a fixed sample key for first-level A proxy testing'''
+    """Return a fixed sample key for first-level A proxy testing"""
     return 'proxyA-0'
 
 
 @pytest.fixture( scope='class' )
 def getSampleProxyAKeys():
-    '''Return a fixed sample keys for first-level A proxy testing'''
+    """Return a fixed sample keys for first-level A proxy testing"""
     return [ 'proxyA-0', 'proxyA-1', 'proxyA-2' ]
 
 
@@ -166,13 +166,13 @@ def getSampleProxyA( getPopulatedMPMUDClasses, getSampleParent, getSampleProxyAK
 
 @pytest.fixture( scope='class' )
 def getSampleProxyA1Key():
-    '''Return a fixed sample key for second-level A1 proxy testing'''
+    """Return a fixed sample key for second-level A1 proxy testing"""
     return 'proxyA1-0'
 
 
 @pytest.fixture( scope='class' )
 def getSampleProxyA1Keys():
-    '''Return a fixed sample keys for first-level A proxy testing'''
+    """Return a fixed sample keys for first-level A proxy testing"""
     return [ 'proxyA1-0', 'proxyA1-1', 'proxyA1-2' ]
 
 
@@ -184,7 +184,7 @@ def getSampleProxyA1( getPopulatedMPMUDClasses, getSampleProxyA, getSampleProxyA
 
 
 class TestInitSubclass:
-    '''Test __init_subclass__ permutations'''
+    """Test __init_subclass__ permutations"""
 
     def test_init_subclass( self ):
         class MyTestClassBase( mongo_objects.PolymorphicMongoSingleProxy ):
@@ -392,9 +392,9 @@ class TestCreateA1NoSave:
 
 class TestPolymorphicBasics:
     def test_subclass_map( self , getPopulatedMPMUDClasses ):
-        '''getMPMUDClasses create a new proxy_subclass_map namespace for each proxy base class
+        """getMPMUDClasses create a new proxy_subclass_map namespace for each proxy base class
         Verify the keys in the proxy_subclass map
-        Verify the base class proxy_subclass map is empty'''
+        Verify the base class proxy_subclass map is empty"""
         classes = getPopulatedMPMUDClasses
         assert len( mongo_objects.PolymorphicMongoSingleProxy.proxy_subclass_map ) == 0
         assert sorted( classes['A'].proxy_subclass_map ) == ['Aa', 'Ab', 'Ac']
@@ -403,10 +403,10 @@ class TestPolymorphicBasics:
 
 
     def test_get_proxy( self, getPopulatedMPMUDClasses, getSampleParent, getSampleProxyAKeys, getSampleProxyA1Keys ):
-        '''Test accessing both first-level and second-level proxies
+        """Test accessing both first-level and second-level proxies
 
         For testing convenience, the keys of the getPopulatedMPMUDClasses dictionary
-        match the proxy_subclass_key for each subclass'''
+        match the proxy_subclass_key for each subclass"""
         classes = getPopulatedMPMUDClasses
         parent = getSampleParent
 

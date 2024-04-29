@@ -10,11 +10,11 @@ import secrets
 
 @pytest.fixture( scope='class' )
 def getMMUDClasses( mongo_db ):
-    '''Return a MongoUserDict configured for a per-class unique collection
+    """Return a MongoUserDict configured for a per-class unique collection
 
     Since the single proxy classes are used multiple times,
     we don't provide a container_name. Otherwise, each instance
-    would use the same location by default.'''
+    would use the same location by default."""
 
     class MyMongoUserDict( mongo_objects.MongoUserDict ):
         collection_name = secrets.token_hex(6)
@@ -96,7 +96,7 @@ def getSampleParent( getPopulatedMMUDClasses ):
 
 @pytest.fixture( scope='class' )
 def getSampleProxyAKey():
-    '''Return a fixed sample key for first-level A proxy testing'''
+    """Return a fixed sample key for first-level A proxy testing"""
     return 'proxyA-0'
 
 
@@ -108,7 +108,7 @@ def getSampleProxyA( getPopulatedMMUDClasses, getSampleParent, getSampleProxyAKe
 
 @pytest.fixture( scope='class' )
 def getSampleProxyA1Key():
-    '''Return a fixed sample key for second-level A1 proxy testing'''
+    """Return a fixed sample key for second-level A1 proxy testing"""
     return 'proxyA1-0'
 
 
@@ -583,7 +583,7 @@ class TestUpdate:
 
 class TestBasics:
     def test_create_key( self, getPopulatedMMUDClasses, getSampleProxyA ):
-        '''Test key creation for single and two-level proxies'''
+        """Test key creation for single and two-level proxies"""
         classes = getPopulatedMMUDClasses
         proxyA = getSampleProxyA
         parent = proxyA.parent
@@ -656,7 +656,7 @@ class TestBasics:
 
 
     def test_get_proxies( self, getPopulatedMMUDClasses, getSampleParent ):
-        '''single proxy objects don't support get_proxies()'''
+        """single proxy objects don't support get_proxies()"""
         classes = getPopulatedMMUDClasses
         parent = getSampleParent
 
@@ -665,7 +665,7 @@ class TestBasics:
 
 
     def test_get_proxy( self, getPopulatedMMUDClasses, getSampleParent, getSampleProxyAKey ):
-        '''Test accessing both first-level and second-level proxies'''
+        """Test accessing both first-level and second-level proxies"""
         classes = getPopulatedMMUDClasses
         parent = getSampleParent
 
@@ -723,19 +723,19 @@ class TestBasics:
 
 
     def test_id( self, getSampleProxyA ):
-        '''Test ID for single level proxy'''
+        """Test ID for single level proxy"""
         proxy = getSampleProxyA
         assert proxy.id() == f"{proxy.parent.id()}{proxy.parent.subdoc_key_sep}0"
 
 
     def test_id_A1( self, getSampleProxyA1 ):
-        '''Test ID for two-level proxy'''
+        """Test ID for two-level proxy"""
         proxy = getSampleProxyA1
         assert proxy.id() == f"{proxy.ultimate_parent.id()}{proxy.ultimate_parent.subdoc_key_sep}0{proxy.ultimate_parent.subdoc_key_sep}0"
 
 
     def test_init( self, getPopulatedMMUDClasses, getSampleParent, getSampleProxyAKey, getSampleProxyA1Key ):
-        '''Test initialization of single and two-level proxies'''
+        """Test initialization of single and two-level proxies"""
         classes = getPopulatedMMUDClasses
         parent = getSampleParent
         keyA = getSampleProxyAKey
@@ -755,7 +755,7 @@ class TestBasics:
 
 
     def test_init_bad_key( self, getPopulatedMMUDClasses, getSampleParent, getSampleProxyAKey ):
-        '''Test initialization of single and two-level proxies'''
+        """Test initialization of single and two-level proxies"""
         classes = getPopulatedMMUDClasses
         parent = getSampleParent
 
