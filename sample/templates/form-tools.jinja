@@ -1,0 +1,62 @@
+{# form-tools.jinja
+ # Helpful macros for displaying forms
+ #}
+
+{# Display a generic WTForm field
+ # Label appears above the input field
+ # If the field has errors, set the is-invalid class and display the errors #}
+{% macro displayField( field ) %}
+    <div class="mb-3">
+        {{field.label(class="form-label")}}
+        {% if field.errors %}
+        {{ field(class="form-control is-invalid") }}
+        <div class="invalid-feedback">{{ field.errors|join(' / ') }}</div>
+        {% else %}
+        {{ field(class="form-control") }}
+        {% endif %}
+    </div>
+{% endmacro %}
+
+
+{# Display a WTForm textarea input #}
+{% macro displayTextArea( field, rows=30 ) %}
+    <div class="mb-3">
+        {{field.label(class="form-label")}}
+        {% if field.errors %}
+        {{ field(class="form-control is-invalid", rows=rows) }}
+        <div class="invalid-feedback">{{ field.errors|join(' / ') }}</div>
+        {% else %}
+        {{ field(class="form-control", rows=rows) }}
+        {% endif %}
+    </div>
+{% endmacro %}
+
+
+{# Display a WTForm boolean field
+ # The checkbox comes first
+ # The label is used as the description
+ #}
+{% macro displayBooleanField( field ) %}
+    <div class="mb-3 form-check">
+        {% if field.errors %}
+            {{ field(class="is-invalid") }}
+            {{ field.label() }}
+            <div class="invalid-feedback">{{ field.errors|join(' / ') }}</div>
+        {% else %}
+            {{ field() }}
+            {{ field.label() }}
+        {% endif %}
+    </div>
+{% endmacro %}
+
+
+{# Display field-like plaintext #}
+{% macro displayPlaintext( id, label, content ) %}
+    <div class="mb-3">
+        {{ field(class="form-control") }}
+        <label for="{{id}}" class="form-label">{{label}}</label>
+      <input type="text" readonly class="form-control-plaintext" id="{{id}}" value="{{content}}">
+    </div>
+{% endmacro %}
+
+

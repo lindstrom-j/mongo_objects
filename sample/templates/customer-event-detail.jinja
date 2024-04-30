@@ -1,0 +1,47 @@
+{% extends "base.jinja" %}
+
+{% set title = event.name %}
+{% set iteration = 5 %}
+{% set mode = "customer" %}
+
+
+{% block content %}
+<h1 class="mt-4">{{ title }}</h1>
+<div class="my-2">
+    {{ event.description }}
+</div>
+<div class="my-2">
+    <label class="datalabel">Event Date</label>
+    <div>{{ event.displayDate() }}</div>
+</div>
+<div class="my-2">
+    <label class="datalabel">Tickets</label>
+    {% for ticketType in event.getTicketTypes() %}
+        {% if loop.first %}
+        <table>
+            <tbody>
+        {% endif %}
+                <tr>
+                    <td class="pe-3">{{ ticketType.name }}</td>
+                    <td class="px-3">{{ ticketType.description }}</td>
+                    <td class="px-3">￥{{ ticketType.cost }}</td>
+                    <td class="px-3">
+                        {% if ticketType.isSoldOut() %}
+                        <br><span style="color: red;">Sold Out!</span>
+                        {% else %}
+                        <a href="{{ url_for('customerPurchaseTicket', ticketTypeId=ticketType.id()) }}" role="button" class="btn btn-outline-primary btn-sm">Purchase</a>
+                        {% endif %}
+                    </td>
+                </tr>
+        {% if loop.last %}
+            </tbody>
+        </table>
+        {% endif %}
+    {% else %}
+    <p>No ticket are available.</p>
+    {% endfor %}
+</div>
+<div class="mt-4">
+    <a href="{{ url_for('customerEventList') }}" role="button" class="btn btn-primary btn-sm">Back</a>
+</div>
+{% endblock %}

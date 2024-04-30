@@ -1,0 +1,47 @@
+{% extends "base.jinja" %}
+
+{% set event = ticketType.parent %}
+
+{% set title = ticketType.name %}
+{% set iteration = 5 %}
+{% set mode = "admin" %}
+
+
+{% block content %}
+<h1 class="mt-4">{{ event.name }}</h1>
+<div class="my-2">
+    <label class="datalabel">Event date</label>
+    {{ event.displayDate() }}
+</div>
+<div class="my-2">
+    <label class="datalabel">Ticket Type</label>
+    {{ ticketType.name }}
+</div>
+<div class="my-2">
+    {% for ticket in ticketType.getTickets() %}
+        {% if loop.first %}
+        <table>
+            <thead>
+                <th class="pe-3">Ticket Number</th>
+                <th class="px-3">Name</th>
+                <th class="ps-3">Issued</th>
+            </thead>
+            <tbody>
+        {% endif %}
+                <tr>
+                    <td class="pe-3">{{ ticket.id() }}</td>
+                    <td class="px-3">{{ ticket.name }}</td>
+                    <td class="ps-3">{{ ticket.displayIssuedTime() }}</td>
+                </tr>
+        {% if loop.last %}
+            </tbody>
+        </table>
+        {% endif %}
+    {% else %}
+    <p>No ticket types have been issued.</p>
+    {% endfor %}
+</div>
+<div class="mt-4">
+    <a href="{{ url_for('adminEventDetail', eventId=event.id()) }}" role="button" class="btn btn-primary btn-sm">Back</a>
+</div>
+{% endblock %}

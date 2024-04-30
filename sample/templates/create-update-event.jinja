@@ -1,0 +1,31 @@
+{% extends "base.jinja" %}
+{% import "form-tools.jinja" as formTools %}
+
+{# We use eventId to decide if we are updating an existing event or creating a new one #}
+{% if eventId is defined %}
+{% set title = "Update Event" %}
+{% set cancelLink = url_for( 'adminEventDetail', eventId=eventId ) %}
+
+{% else %}
+{% set title = "Create Event" %}
+{% set cancelLink = url_for( 'adminEventList' ) %}
+{% endif %}
+
+{% set iteration = 5 %}
+{% set mode = "admin" %}
+
+
+{% block content %}
+<h1 class="mt-4">{{ title }}</h1>
+<form class="mb-3" action="" method="post">
+{{ form.hidden_tag() }}
+{{ formTools.displayField( form.name ) }}
+{{ formTools.displayField( form.description ) }}
+{{ formTools.displayField( form.eventDate) }}
+
+    <div class="mb-3">
+        <a href="{{ cancelLink }}" class="btn btn-outline-primary">Cancel</a>
+        {{ form.submitButton( class="btn btn-primary", value=title ) }}
+    </div>
+</form>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "base.jinja" %}
+{% import "form-tools.jinja" as formTools %}
+
+{# Either a ticketType or an event object must be provided #}
+{% if ticketType is defined %}
+{% set title = "Update Ticket Type" %}
+{% set eventId = ticketType.parent.id() %}
+
+{% else %}
+{% set title = "Create Ticket Type" %}
+{% set eventId = event.id() %}
+{% endif %}
+
+{% set iteration = 5 %}
+{% set mode = "admin" %}
+
+
+{% block content %}
+<h1 class="mt-4">{{ title }}</h1>
+<form class="mb-3" action="" method="post">
+{{ form.hidden_tag() }}
+{{ formTools.displayField( form.name ) }}
+{{ formTools.displayField( form.description ) }}
+{{ formTools.displayField( form.cost ) }}
+{{ formTools.displayField( form.ticketsTotal ) }}
+    <div class="mb-3">
+        <a href="{{ url_for( 'adminEventDetail', eventId=eventId ) }}" class="btn btn-outline-primary">Cancel</a>
+        {{ form.submitButton( class="btn btn-primary", value=title ) }}
+    </div>
+</form>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "base.jinja" %}
+
+{% set title = "Delete Ticket Type" %}
+{% set iteration = 5 %}
+{% set mode = "admin" %}
+
+
+{% block content %}
+<h1 class="mt-4">{{ title }}</h1>
+
+<p>Are you sure you want to delete this ticket type?</p>
+
+<form action="" method="post">
+{{ form.hidden_tag() }}
+
+<div class="my-2">
+    <span class="bold">{{ ticketType.name }}</span><br>
+    {{ ticketType.description }}
+</div>
+<div class="my-2">
+    <label class="datalabel">Cost</label>
+    ￥{{ ticketType.cost }}
+</div>
+<div class="my-2">
+    <label class="datalabel">Total Tickets</label>
+    {{ ticketType.ticketsTotal }}
+</div>
+<div class="my-2">
+    <label class="datalabel">Tickets Sold</label>
+    {{ ticketType.ticketsSold() }}
+</div>
+
+<div class="mt-4">
+    <a href="{{ url_for('adminEventDetail', eventId=ticketType.parent.id()) }}" role="button" class="btn btn-primary btn-sm">Cancel</a>
+    {{ form.submitButton( class="btn btn-outline-primary btn-sm" ) }}
+</div>
+</form>
+{% endblock %}

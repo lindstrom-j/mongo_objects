@@ -1,0 +1,7 @@
+Flask
+Flask-PyMongo
+Flask-WTF
+MarkupSafe
+mongo_objects
+pymongo
+WTForms

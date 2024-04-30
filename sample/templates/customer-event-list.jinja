@@ -1,0 +1,30 @@
+{% extends "base.jinja" %}
+
+{% set title = "Events" %}
+{% set iteration = 5 %}
+{% set mode = "customer" %}
+
+{% block content %}
+<h1 class="mt-4">{{ title }}</h1>
+
+{% for event in events|sort(attribute="eventDate", reverse=True) %}
+<div class="my-3">
+    <label><a href="{{ url_for('customerEventDetail', eventId=event.id()) }}" style="font-weight: bold;">{{ event['name'] }}</a></label>
+    <div>{{ event['description'] }}</div>
+    {% if event.isFutureEvent() %}
+        {% if event.isSoldOut() %}
+    <div>{{ event.displayDate() }}<br><span style="color: red;">Sold Out!</span></div>
+        {% else %}
+    <div>{{ event.displayDate() }}<br><span style="color: green;">Get Your Tickets Today!</span></div>
+        {% endif %}
+    {% else %}
+    <div style="color:darkgray">{{ event.displayDate() }}</div>
+    {% endif %}
+</div>
+
+{% else %}
+<p>No events have been scheduled</p>
+{% endfor %}
+
+<p style="margin-top: 3em; font-size: 80%;">Switch to the <a href="{{ url_for( 'adminEventList' ) }}">admin view</a>.
+{% endblock %}

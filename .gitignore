@@ -8,5 +8,6 @@ docs/build
 .DS_Store
 __pycache__
 .pytest_cache
+sample/venv
 venv
 .vscode
