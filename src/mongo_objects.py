@@ -16,7 +16,7 @@
 # Released under the MIT License
 
 from bson import ObjectId
-from collections import namedtuple, UserDict
+from collections import UserDict
 from datetime import datetime
 from pymongo.collection import ReturnDocument
 
@@ -54,9 +54,13 @@ class MongoUserDict( UserDict ):
 
     #: Required: override with the name of the MongoDB collection
     #: where the documents are stored
+    #:
+    #: :meta hide-value:
     collection_name = None
 
     #: Required: override with the pymongo database connection object
+    #:
+    #: :meta hide-value:
     database = None
 
     #: Optional: If object_version is not``None``, :func:`find()` and :func:`find_one()`
@@ -516,6 +520,8 @@ class PolymorphicMongoUserDict( MongoUserDict ):
 
     #: Must be unique and non-None for each subclass
     #: Base classes may define this key as well
+    #:
+    #: :meta hide-value:
     subclass_key = None
 
     #: Optional. Name of internal key added to each document to record the subclass_key
@@ -670,6 +676,8 @@ class MongoBaseProxy( object ):
     """Base of all other proxy objects. Not intended to be directly subclassed."""
 
     #: Users must override this to provide the name of the dictionary or list container
+    #:
+    #: :meta hide-value:
     container_name = None
 
 
@@ -763,6 +771,8 @@ class PolymorphicMongoBaseProxy( MongoBaseProxy ):
 
     # Must be unique and non-None for each subclass
     # Base classes may define this key as well
+    #:
+    #: :meta hide-value:
     proxy_subclass_key = None
 
     # Name of internal key added to each subdocument to record the proxy_subclass_key
@@ -830,8 +840,7 @@ class AccessDictProxy( object ):
     @classmethod
     def create( cls, parent, subdoc={}, autosave=True ):
         """Add a new subdocument to the container.
-        Auto-assign the ID
-        Return the new proxy object"""
+        Auto-assign the ID and return the new proxy object"""
         key = cls.create_key( parent )
 
         # insure the container exists before adding the document
@@ -943,8 +952,7 @@ class AccessListProxy( object ):
     @classmethod
     def create( cls, parent, subdoc={}, autosave=True ):
         """Add a new subdocument to the container.
-        Auto-assign the ID
-        Return the new proxy object.
+        Auto-assign the ID and return the new proxy object
         """
         # Create a unique key for this subdocument
         key = cls.create_key( parent )
@@ -1043,8 +1051,7 @@ class MongoListProxy( MongoBaseProxy, AccessListProxy ):
 
     @classmethod
     def get_proxy( cls, parent, key=None, seq=None ):
-        """Return a single proxy object. For non-polymorphic use,
-        this simply calls __init__()"""
+        """Return a single proxy object. This simply calls __init__()"""
         return cls( parent, key, seq )
 
 
@@ -1055,8 +1062,8 @@ class PolymorphicMongoListProxy( PolymorphicMongoBaseProxy, AccessListProxy ):
 
     @classmethod
     def get_proxy( cls, parent, key=None, seq=None ):
-        """Return a single proxy object. For PolymorphicMongoDictProxy,
-        determine the correct subclass type and call __init__()"""
+        """Return a single proxy object.
+        Determine the correct subclass type and call __init__()"""
         # use an anonymous base-class proxy to get access to the subdocument
         # so that get_subclass_from_doc can inspect the data and determine the
         # appropriate subclass.
@@ -1095,9 +1102,7 @@ class AccessSingleProxy( AccessDictProxy ):
 
     @classmethod
     def get_proxies( cls, parent ):
-        """get_proxies() doesn't make sense for single proxy use.
-        This is a class method and we don't know the key, so
-        we don't know which of the parent's subdocuments to return"""
+        """get_proxies() doesn't make sense for single proxy use."""
         raise Exception( 'single proxy objects do not support get_proxies()' )
 
 
@@ -1115,15 +1120,12 @@ class AccessSingleProxy( AccessDictProxy ):
 
 
 
-
-
 class MongoSingleProxy( AccessSingleProxy, MongoBaseProxy ):
     """Implement proxy object for a single subdocument dictionary"""
 
     @classmethod
     def get_proxy( cls, parent, key=None ):
-        """Return a single proxy object. For non-polymorphic use,
-        this simply calls __init__()"""
+        """Return a single proxy object. This simply calls __init__()"""
         if key is None:
             key = cls.container_name
         return cls( parent, key )
@@ -1146,8 +1148,8 @@ class PolymorphicMongoSingleProxy( AccessSingleProxy, PolymorphicMongoBaseProxy 
 
     @classmethod
     def get_proxy( cls, parent, key=None ):
-        """Return a single proxy object. For PolymorphicMongoDictProxy,
-        determine the correct subclass type and call __init__()"""
+        """Return a single proxy object.
+        Determine the correct subclass type and call __init__()"""
         # use an anonymous base-class proxy to get access to the subdocument
         # so that get_subclass_from_doc can inspect the data and determine the
         # appropriate subclass.

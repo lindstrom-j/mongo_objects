@@ -64,14 +64,6 @@ the parent document object.
    MongoSingleProxy
 
 
-Additional Information
-----------------------
-.. toctree::
-   :maxdepth: 2
-
-   customization
-
-
 Credits
 -------
 

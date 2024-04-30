@@ -250,17 +250,17 @@ polymorphic classes use their own namespace for subclass keys. ::
     # now create subclasses for each object variation
     # each subclass requires a unique key
     class OnSiteEvent( Event ):
-        suclass_key = 'onsite'
+        subclass_key = 'onsite'
 
         .. your onsite-specific event functions ...
 
     class OnlineEvent( Event ):
-        suclass_key = 'online'
+        subclass_key = 'online'
 
         .. your online-specific event functions ...
 
     class HybridEvent( Event ):
-        suclass_key = 'hybrid'
+        subclass_key = 'hybrid'
 
         .. your hybrid-specific event functions ...
 
