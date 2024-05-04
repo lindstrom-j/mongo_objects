@@ -392,6 +392,21 @@ class MongoUserDict( UserDict ):
         return obj
 
 
+    def proxy_id( self, *args, include_parent_doc_id=False ):
+        """Assemble a list of proxy IDs into a single string
+
+        :param include_parent_doc_id: whether to include the
+          parent document ID in the resulting ID string
+        :type include_parent_doc_id: bool
+        :return: One or more proxy IDs separated by `subdoc_key_sep`
+        :rtype: str
+        """
+        if include_parent_doc_id:
+            return self.subdoc_key_sep.join( [ self.id(), *args ] )
+        else:
+            return self.subdoc_key_sep.join( args )
+
+
     def save( self, force=False ):
         """
         Intelligent wrapper to insert or replace a document
@@ -702,7 +717,7 @@ class MongoBaseProxy( object ):
 
 
     @classmethod
-    def create_key( cls, parent ):
+    def create_key( cls, parent, subdoc ):
         """
         Create a unique key value for this subdocument.
         The default implementation requests a hex string for the next unique integer
@@ -725,7 +740,7 @@ class MongoBaseProxy( object ):
 
 
     def id( self ):
-        return f"{self.parent.id()}{self.ultimate_parent.subdoc_key_sep}{self.key}"
+        return self.proxy_id( include_parent_doc_id=True )
 
 
     def items( self ):
@@ -734,6 +749,13 @@ class MongoBaseProxy( object ):
 
     def keys( self ):
         return self.get_subdoc().keys()
+
+
+    def proxy_id( self, *args, include_parent_doc_id=False ):
+        """Force the subdocument ID for single proxies to "0". We
+        can't use the actual key as we risk exposing the actual
+        dictionary key name."""
+        return self.parent.proxy_id( self.key, *args, include_parent_doc_id=include_parent_doc_id )
 
 
     def setdefault( self, key, default=None ):
@@ -760,9 +782,9 @@ class MongoBaseProxy( object ):
 class PolymorphicMongoBaseProxy( MongoBaseProxy ):
     """Like MongoBaseProxy but supports polymorphic subdocument objects within the same parent document.
 
-    Each subclass needs to define a unique proxy_subclass_key
+    Each subclass needs to define a unique `proxy_subclass_key`
 
-    Parent objects need to call get_proxy() to obtain the correct subclass type"""
+    Parent objects need to call `get_proxy()` to obtain the correct subclass type"""
 
     # Map proxy_subclass_keys to subclasses
     # Override this with an empty dictionary in the base class
@@ -841,7 +863,7 @@ class AccessDictProxy( object ):
     def create( cls, parent, subdoc={}, autosave=True ):
         """Add a new subdocument to the container.
         Auto-assign the ID and return the new proxy object"""
-        key = cls.create_key( parent )
+        key = cls.create_key( parent, subdoc )
 
         # insure the container exists before adding the document
         parent.setdefault( cls.container_name, {} )[ key ] = subdoc
@@ -860,6 +882,16 @@ class AccessDictProxy( object ):
         if autosave:
             self.parent.save()
         self.key = None
+
+
+    @classmethod
+    def exists( cls, parent, key ):
+        '''Return True if the key already exists in the dictionary container
+
+        :param parent: parent document
+        :param key: key being queried
+        '''
+        return key in parent.get( cls.container_name, {} )
 
 
     @classmethod
@@ -955,7 +987,7 @@ class AccessListProxy( object ):
         Auto-assign the ID and return the new proxy object
         """
         # Create a unique key for this subdocument
-        key = cls.create_key( parent )
+        key = cls.create_key( parent, subdoc )
 
         # Add the key to the subdocument
         cls.set_key( subdoc, key )
@@ -986,6 +1018,19 @@ class AccessListProxy( object ):
         if autosave:
             self.parent.save()
         self.key = self.seq = None
+
+
+    @classmethod
+    def exists( cls, parent, key ):
+        '''Return True if the key already exists in the list container
+
+        :param parent: parent document
+        :param key: key being queried
+        '''
+        for subdoc in parent.get( cls.container_name, [] ):
+            if cls.get_key( subdoc ) == key:
+                return True
+        return False
 
 
     @classmethod
@@ -1101,6 +1146,18 @@ class AccessSingleProxy( AccessDictProxy ):
 
 
     @classmethod
+    def exists( cls, parent, key=None ):
+        '''Return True if the key already exists in the parent document
+
+        :param parent: parent document
+        :param key: key being queried
+        '''
+        if key is None:
+            key = cls.container_name
+        return key in parent
+
+
+    @classmethod
     def get_proxies( cls, parent ):
         """get_proxies() doesn't make sense for single proxy use."""
         raise Exception( 'single proxy objects do not support get_proxies()' )
@@ -1111,11 +1168,11 @@ class AccessSingleProxy( AccessDictProxy ):
         return self.parent
 
 
-    def id( self ):
+    def proxy_id( self, *args, include_parent_doc_id=False ):
         """Force the subdocument ID for single proxies to "0". We
         can't use the actual key as we risk exposing the actual
         dictionary key name."""
-        return f"{self.parent.id()}{self.ultimate_parent.subdoc_key_sep}0"
+        return self.parent.proxy_id( '0', *args, include_parent_doc_id=include_parent_doc_id )
 
 
 

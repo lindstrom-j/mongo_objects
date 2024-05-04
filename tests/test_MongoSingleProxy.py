@@ -590,12 +590,12 @@ class TestBasics:
         updated = parent['_updated']
 
         # create a proxyA key
-        keyA = classes['A'].create_key( parent )
+        keyA = classes['A'].create_key( parent, {} )
         assert isinstance( keyA, str )
         assert keyA == f"{parent['_last_unique_integer']:x}"
 
         # create a proxyA1 key
-        keyA1 = classes['A1'].create_key( proxyA )
+        keyA1 = classes['A1'].create_key( proxyA, {} )
         assert isinstance( keyA1, str )
         assert keyA1 == f"{parent['_last_unique_integer']:x}"
         assert keyA != keyA1
@@ -627,6 +627,19 @@ class TestBasics:
         proxy = getSampleProxyA1
         # verify that the data references the same dictionary
         assert id( proxy.data() ) == id( proxy.ultimate_parent[proxy.parent.key][proxy.key] )
+
+
+    def test_exists( self, getPopulatedMMUDClasses, getSampleProxyA ):
+        classes = getPopulatedMMUDClasses
+        proxy = getSampleProxyA
+        # verify the class can find this key within this parent
+        assert classes['A'].exists( proxy.parent, proxy.key )
+
+
+    def test_exists_non_existent( self, getPopulatedMMUDClasses, getSampleParent ):
+        classes = getPopulatedMMUDClasses
+        # verify a non-existent key can't be located
+        assert not classes['A'].exists( getSampleParent, 'non-existent-key' )
 
 
     def test_get( self, getSampleProxyA ):
@@ -812,6 +825,34 @@ class TestBasics:
         proxyA = proxyA1.parent
 
         assert proxyA1.keys() == proxyA1.ultimate_parent[ proxyA.key ][ proxyA1.key ].keys()
+
+
+    def test_proxy_id( self, getSampleProxyA ):
+        """Test single level proxy ID"""
+        proxy = getSampleProxyA
+        assert proxy.proxy_id() == f"0"
+
+
+    def test_proxy_id_with_parent_id( self, getSampleProxyA ):
+        """Test single level proxy ID with parent ID
+        This should be the same as id()"""
+        proxy = getSampleProxyA
+        assert proxy.proxy_id( include_parent_doc_id=True ) == f"{proxy.parent.id()}{proxy.parent.subdoc_key_sep}0"
+        assert proxy.proxy_id( include_parent_doc_id=True ) == proxy.id()
+
+
+    def test_id_A1( self, getSampleProxyA1 ):
+        """Test second level proxy ID"""
+        proxy = getSampleProxyA1
+        assert proxy.proxy_id() == f"0{proxy.ultimate_parent.subdoc_key_sep}0"
+
+
+    def test_id_A1_id_with_parent_id( self, getSampleProxyA1 ):
+        """Test second level proxy ID with parent ID.
+        This should be the same as id()"""
+        proxy = getSampleProxyA1
+        assert proxy.proxy_id( include_parent_doc_id=True ) == f"{proxy.ultimate_parent.id()}{proxy.ultimate_parent.subdoc_key_sep}0{proxy.ultimate_parent.subdoc_key_sep}0"
+        assert proxy.proxy_id( include_parent_doc_id=True ) == proxy.id()
 
 
     def test_save( self, getPopulatedMMUDClasses, getSampleProxyA ):
