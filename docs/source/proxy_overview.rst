@@ -52,6 +52,10 @@ You can create as many proxies as needed to describe the data structure of
 your document. Proxies can also be nested to access subdocuments within
 subdocuments.
 
+The same proxy may be used as a subdocument in multiple document collections,
+for example, a :class:`MongoSingleProxy` *Address* subdocument used in the
+Customer, Vendor and Employee collections.
+
 
 CRUD Operations
 ---------------

@@ -821,7 +821,7 @@ class TestBasics:
         # create a proxy for the first proxyA key
         proxyA = classes['A']( parent, seq=0 )
 
-        # creating a first-level proxy with a bad key raises an exception
+        # creating a second-level proxy with a bad key raises an exception
         # proxy must be accessed before the invalid key is detected
         with pytest.raises( Exception ):
             proxyA1 = classes['A1']( proxyA, 'not-a-valid-key')

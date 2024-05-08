@@ -25,6 +25,11 @@ This data structure can be accessed as::
         collection_name = 'events'
         database = ... pymongo database connection object ...
 
+The same :class:`MongoSingleProxy` proxy definition may be used
+as a subdocument in multiple document collections,
+for example, an *Address* subdocument used in the
+Customer, Vendor and Employee collections.
+
 
 Proxy Keys
 ----------
@@ -36,12 +41,9 @@ The subdocument proxy key is the actual dictionary key used to identify
 the subdocument in the parent dictionary. Since there is no separate container,
 this is usually the parent document itself.
 
-The key is usually defined in the class with `container_name`. However, for
-utility classes (perhaps address, phone number or currency amount), the data
-may occur in multiple locations. In that case, a key name can be provided to the
-constructor or :func:`get_proxy`::
-
-    alternate_venue = Venue( event, 'alternate' )
+The key is defined in the class as `container_name`. To keep the parallel with
+:class:`MongoDictProxy` and :class:`MongoListProxy`, :func:`get_proxy` accepts
+a `key` argument but it is ignored.
 
 
 Subdocument IDs
@@ -49,10 +51,10 @@ Subdocument IDs
 
 Since the proxy key is an actual dictionary key in our document schema, it is not
 necessarily safe to share with users in a URL, for example. To protect against
-data schema leakage, the :func:`id` function always uses ``"0"`` when constructing
-subdocument IDs for :class:`MongoSingleProxy` instances.
+data schema leakage, the :func:`id` and :func:`proxy_id` functions always uses ``"0"``
+when constructing subdocument IDs for :class:`MongoSingleProxy` instances.
 
-Since the *container_name* is typically provided in the class definition,
+Since the *container_name* is provided in the class definition,
 :func:`load_proxy_by_id` can create these proxies without problem. ::
 
     class Event( mongo_objects.MongoUserDict ):

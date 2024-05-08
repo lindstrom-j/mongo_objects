@@ -11,23 +11,20 @@ import secrets
 @pytest.fixture( scope='class' )
 def getMMUDClasses( mongo_db ):
     """Return a MongoUserDict configured for a per-class unique collection
-
-    Since the single proxy classes are used multiple times,
-    we don't provide a container_name. Otherwise, each instance
-    would use the same location by default."""
+    """
 
     class MyMongoUserDict( mongo_objects.MongoUserDict ):
         collection_name = secrets.token_hex(6)
         database = mongo_db
 
     class MyMongoSingleProxyA( mongo_objects.MongoSingleProxy ):
-        pass
+        container_name = 'proxyA'
 
     class MyMongoSingleProxyA1( mongo_objects.MongoSingleProxy ):
-        pass
+        container_name = 'proxyA1'
 
     class MyMongoSingleProxyB( mongo_objects.MongoSingleProxy ):
-        pass
+        container_name = 'proxyB'
 
     return {
         'base' : MyMongoUserDict,
@@ -52,34 +49,28 @@ def getPopulatedMMUDClasses( getMMUDClasses ):
         } )
 
         # make first-level proxies
-        for j in range( itemMax ):
-            proxyA = classes['A'].create(
-                parent,
-                {
-                    'nameA' : f"Proxy A-{j}",
-                    'amountA' : j * 100,
-                },
-                key=f"proxyA-{j}",
-            )
-            proxyB = classes['B'].create(
-                parent,
-                {
-                    'nameB' : f"Proxy B-{j}",
-                    'amountB' : j * 100 + 1,
-                },
-                key=f"proxyB-{j}"
-            )
+        proxyA = classes['A'].create(
+            parent,
+            {
+                'nameA' : f"Proxy A",
+                'amountA' : 100,
+            },
+        )
+        proxyB = classes['B'].create(
+            parent,
+            {
+                'nameB' : f"Proxy B",
+                'amountB' : 101,
+            },
+        )
 
-            # make second-level proxies
-            for k in range( itemMax ):
-                proxyA1 = classes['A1'].create(
-                    proxyA,
-                    {
-                        'nameA1' : f"Proxy A1-{k}",
-                        'amountA1' : k * 1000,
-                    },
-                    key=f"proxyA1-{k}"
-                )
+        proxyA1 = classes['A1'].create(
+            proxyA,
+            {
+                'nameA1' : f"Proxy A1",
+                'amountA1' : 1000,
+            },
+        )
 
         # save data
         parent.save()
@@ -97,7 +88,7 @@ def getSampleParent( getPopulatedMMUDClasses ):
 @pytest.fixture( scope='class' )
 def getSampleProxyAKey():
     """Return a fixed sample key for first-level A proxy testing"""
-    return 'proxyA-0'
+    return 'proxyA'
 
 
 @pytest.fixture( scope='class' )
@@ -109,7 +100,7 @@ def getSampleProxyA( getPopulatedMMUDClasses, getSampleParent, getSampleProxyAKe
 @pytest.fixture( scope='class' )
 def getSampleProxyA1Key():
     """Return a fixed sample key for second-level A1 proxy testing"""
-    return 'proxyA1-0'
+    return 'proxyA1'
 
 
 @pytest.fixture( scope='class' )
@@ -121,107 +112,101 @@ def getSampleProxyA1( getPopulatedMMUDClasses, getSampleProxyA, getSampleProxyA1
 
 
 class TestCreate:
-    def test_create( self, getPopulatedMMUDClasses, getSampleProxyA ):
-        classes = getPopulatedMMUDClasses
-        proxyA = getSampleProxyA
-        parent = proxyA.parent
+    def test_create( self, getMMUDClasses ):
+        classes = getMMUDClasses
 
         # record current state
+        parent = classes['base']()
+        parent.save()
         original = dict( parent )
-        count = len( proxyA.get_subdoc_container().keys() )
 
         # create a new entry in a level one proxy
         newProxy = classes['A'].create(
             parent,
             { 'name' : 'new proxyA entry'},
-            key='newProxyA'
         )
 
         # verify a new entry was created
-        assert len( proxyA.get_subdoc_container().keys() ) == count+1
+        assert len( parent.keys() ) == len( original.keys() ) + 1
 
         # confirm the parent document was saved
         assert parent['_updated'] > original['_updated']
 
 
+
 class TestCreateNoSave:
-    def test_create_no_save( self, getPopulatedMMUDClasses, getSampleProxyA ):
-        classes = getPopulatedMMUDClasses
-        proxyA = getSampleProxyA
-        parent = proxyA.parent
+    def test_create_no_save( self, getMMUDClasses ):
+        classes = getMMUDClasses
 
         # record current state
+        parent = classes['base']()
+        parent.save()
         original = dict( parent )
-        count = len( proxyA.get_subdoc_container().keys() )
 
         # create a new entry in a level one proxy without saving the parent
         newProxy = classes['A'].create(
             parent,
             { 'name' : 'new proxyA entry'},
-            key='newProxyA',
             autosave=False
         )
 
         # verify a new entry was created
-        assert len( proxyA.get_subdoc_container().keys() ) == count+1
+        assert len( parent.keys() ) == len( original.keys() ) + 1
 
         # confirm the parent document was not saved
         assert parent['_updated'] == original['_updated']
 
 
+
 class TestCreateA1:
-    def test_create_A1( self, getPopulatedMMUDClasses, getSampleProxyA1 ):
-        classes = getPopulatedMMUDClasses
-        proxyA1 = getSampleProxyA1
-        proxyA = proxyA1.parent
-        parent = proxyA1.ultimate_parent
+    def test_create_A1( self, getMMUDClasses ):
+        classes = getMMUDClasses
+        parent = classes['base']()
+        proxyA = classes['A'].create( parent )
 
         # record current state
-        original = dict( parent )
-        countA = len( proxyA.get_subdoc_container().keys() )
-        countA1 = len( proxyA1.get_subdoc_container().keys() )
+        # this is a shallow copy, so we save proxyA separately
+        original_parent = dict( parent )
+        original_proxyA = dict( proxyA )
 
         # create a new entry in a level two proxy
-        newProxy = classes['A1'].create(
+        proxyA1 = classes['A1'].create(
             proxyA,
             { 'name' : 'new proxyA1 entry'},
-            key='newProxyA1'
         )
 
         # verify a new entry was created at the second (proxyA1) level
-        assert len( proxyA.get_subdoc_container().keys() ) == countA
-        assert len( proxyA1.get_subdoc_container().keys() ) == countA1 + 1
+        assert len( parent.keys() ) == len( original_parent.keys() )
+        assert len( proxyA.keys() ) == len( original_proxyA.keys() ) + 1
 
         # confirm the parent document was saved
-        assert parent['_updated'] > original['_updated']
+        assert parent['_updated'] > original_parent['_updated']
 
 
 class TestCreateA1NoSave:
-    def test_create_A1_no_save( self, getPopulatedMMUDClasses, getSampleProxyA1 ):
-        classes = getPopulatedMMUDClasses
-        proxyA1 = getSampleProxyA1
-        proxyA = proxyA1.parent
-        parent = proxyA1.ultimate_parent
+    def test_create_A1_no_save( self, getMMUDClasses ):
+        classes = getMMUDClasses
+        parent = classes['base']()
+        proxyA = classes['A'].create( parent )
 
         # record current state
-        original = dict( parent )
-        countA = len( proxyA.get_subdoc_container().keys() )
-        countA1 = len( proxyA1.get_subdoc_container().keys() )
+        # this is a shallow copy, so we save proxyA separately
+        original_parent = dict( parent )
+        original_proxyA = dict( proxyA )
 
         # create a new entry in a level two proxy without saving the parent
-        newProxy = classes['A1'].create(
+        proxyA1 = classes['A1'].create(
             proxyA,
             { 'name' : 'new proxyA1 entry'},
-            key='newProxyA1',
             autosave=None
         )
 
         # verify a new entry was created at the second (proxyA1) level
-        assert len( proxyA.get_subdoc_container().keys() ) == countA
-        assert len( proxyA1.get_subdoc_container().keys() ) == countA1 + 1
+        assert len( parent.keys() ) == len( original_parent.keys() )
+        assert len( proxyA.keys() ) == len( original_proxyA.keys() ) + 1
 
         # confirm the parent document was not saved
-        assert parent['_updated'] == original['_updated']
+        assert parent['_updated'] == original_parent['_updated']
 
 
 
@@ -677,30 +662,24 @@ class TestBasics:
             classes['A'].get_proxies( parent )
 
 
-    def test_get_proxy( self, getPopulatedMMUDClasses, getSampleParent, getSampleProxyAKey ):
+    def test_get_proxy( self, getPopulatedMMUDClasses, getSampleParent, getSampleProxyAKey, getSampleProxyA1Key ):
         """Test accessing both first-level and second-level proxies"""
         classes = getPopulatedMMUDClasses
         parent = getSampleParent
 
-        # locate the first key in the proxy A container
-        keyA = getSampleProxyAKey
-
         # create a first-level proxy object
-        proxyA = classes['A'].get_proxy( parent, keyA )
+        proxyA = classes['A'].get_proxy( parent )
 
         # verify dictionary and type matches
-        assert id( proxyA.data() ) == id( parent[ keyA ] )
-        assert isinstance( proxyA, classes['A'])
-
-        # locate the first key in the proxy A1 container
-        keyA1 = list( parent[ keyA ].keys() )[0]
+        assert id( proxyA.data() ) == id( parent[ getSampleProxyAKey ] )
+        assert isinstance( proxyA, classes['A'] )
 
         # create a second-level proxy object
-        proxyA1 = classes['A1'].get_proxy( proxyA, keyA1 )
+        proxyA1 = classes['A1'].get_proxy( proxyA )
 
         # verify dictionary and type matches
-        assert id( proxyA1.data() ) == id( parent[ keyA ][ keyA1 ] )
-        assert isinstance( proxyA1, classes['A1'])
+        assert id( proxyA1.data() ) == id( parent[ getSampleProxyAKey ][ getSampleProxyA1Key ] )
+        assert isinstance( proxyA1, classes['A1'] )
 
 
     def test_get_subdoc( self, getPopulatedMMUDClasses, getSampleProxyA ):
@@ -772,16 +751,13 @@ class TestBasics:
         classes = getPopulatedMMUDClasses
         parent = getSampleParent
 
-        # creating a first-level proxy with a bad key raises an exception
-        with pytest.raises( Exception ):
-            classes['A']( parent, 'not-a-valid-key')
+        # creating a first-level proxy ignores a bad key
+        proxyA = classes['A']( parent, 'not-a-valid-key')
+        proxyA.key == classes['A'].container_name
 
-        # create a first-level proxy
-        proxyA = classes['A']( parent, getSampleProxyAKey )
-
-        # creating a first-level proxy with a bad key raises an exception
-        with pytest.raises( Exception ):
-            classes['A1']( proxyA, 'not-a-valid-key')
+        # creating a second-level proxy ignores a bad key
+        proxyA1 = classes['A1']( proxyA, 'not-a-valid-key')
+        proxyA1.key == classes['A1'].container_name
 
 
 
