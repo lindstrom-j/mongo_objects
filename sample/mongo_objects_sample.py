@@ -1,6 +1,10 @@
 # mongo_objects Sample App
-# Copyright 2024 Headwaters Entrepreneurs Pte Ltd
-# https://headwaters.com.sg
+#
+# https://mongo-objects.headwaters.com.sg
+# https://pypi.org/project/mongo-objects/
+#
+# Copyright 2024 Jonathan Lindstrom
+# Headwaters Entrepreneurs Pte Ltd
 #
 # Released under the MIT License
 
@@ -22,7 +26,7 @@ from wtforms.validators import DataRequired, Length, NumberRange, Optional
 app = Flask(__name__)
 
 # Save a MongoDB client connection on the app
-# Use a URI if provided as the MONGO_CONNECT_URI environment variable
+# Use a URI in the MONGO_CONNECT_URI environment variable, if provided
 # Otherwise, just connect locally to a "mongo_objects_sample" database
 app.mongo = PyMongo(app, os.environ.get('MONGO_CONNECT_URI', 'mongodb://127.0.0.1:27017/mongo_objects_sample' ) )
 
@@ -30,47 +34,69 @@ app.mongo = PyMongo(app, os.environ.get('MONGO_CONNECT_URI', 'mongodb://127.0.0.
 app.config['SECRET_KEY'] = secrets.token_urlsafe(32)
 
 
+################################################################################
+# mongo_objects Classes
+################################################################################
 
-# Form classes
-class CreateUpdateEventForm( FlaskForm ):
-    name = StringField( 'Name', validators=[DataRequired(), Length(max=50)] )
-    updated = HiddenField( 'Updated' )
-    description = TextAreaField( 'Description', validators=[DataRequired()])
-    eventDate = DateField( 'Date', validators=[DataRequired()] )
-    submitButton = SubmitField( 'Create Event' )
+# Use a polymorphic list proxy to track features and gift
+# benefits for the same ticket type.
+#
+# A feature is an intangible benefit included with the ticket,
+# like a front-row seat.
+#
+# A gift is a tangible benefit like a gift bag or free
+# bucket of popcorn.
 
+class Benefit( mongo_objects.PolymorphicMongoListProxy ):
+    container_name = 'benefits'
 
-class CreateUpdateTicketTypeForm( FlaskForm ):
-    name = StringField( 'Name', validators=[DataRequired(), Length(max=50)] )
-    updated = HiddenField( 'Updated' )
-    description = TextAreaField( 'Description', validators=[DataRequired()])
-    ticketsTotal = IntegerField( 'Total Tickets Available', validators=[DataRequired(), NumberRange(min=0)], default=0 )
-    cost = IntegerField( 'Cost', validators=[DataRequired()] )
-    submitButton = SubmitField( 'Create Event' )
+class Feature( Benefit ):
+    proxy_subclass_key = 'ft'
 
-
-class ConfirmForm( FlaskForm ):
-    updated = HiddenField( 'Updated' )
-    submitButton = SubmitField( 'Confirm' )
-
-
-class CustomerPurchaseForm( FlaskForm ):
-    ticketTypeId = HiddenField( 'Ticket Type ID' )
-    name = StringField( 'Name', validators=[DataRequired(), Length(max=50)] )
-    submitButton = SubmitField( 'Confirm' )
+class Gift( Benefit ):
+    proxy_subclass_key = 'gt'
 
 
-# Classes
+
 class TicketType( mongo_objects.MongoDictProxy ):
-    containerName = 'ticketTypes'
+    '''Use a MongoDictProxy to record all the available ticket
+    types for this event as subdocuments.'''
+
+    container_name = 'ticketTypes'
 
     def isSoldOut( self ):
         '''Return True if tickets of this type are not available for this event'''
         return (self.ticketsAvailable() == 0)
 
 
+    def countGifts( self ):
+        return len( Gift.get_proxies( self ) )
+
+
+    def getBenefits( self ):
+        return Benefit.get_proxies( self )
+
+
+    def getFeatures( self ):
+        return Feature.get_proxies( self )
+
+
+    def getGifts( self ):
+        return Gift.get_proxies( self )
+
+
     def getTickets( self ):
         return self.parent.getTicketsByType( self.key )
+
+
+    def giftNames( self ):
+        names = [ x['name'] for x in Gift.get_proxies( self ) ]
+        if len( names ) == 0:
+            return ''
+        elif len( names ) == 1:
+            return names[0]
+        else:
+            return ' and '.join( [ ', '.join( names[:-1] ), names[-1] ] )
 
 
     def sell( self, name ):
@@ -88,14 +114,22 @@ class TicketType( mongo_objects.MongoDictProxy ):
 
 
 class Ticket( mongo_objects.MongoListProxy ):
-    containerName = 'tickets'
+    '''Use a MongoListProxy to track each ticket sold as a subdocument'''
+    container_name = 'tickets'
 
     def displayIssuedTime( self ):
         return self['issued'].strftime('%Y-%m-%d %H:%M')
 
 
 
+class Venue( mongo_objects.MongoSingleProxy ):
+    container_name = 'venue'
+
+
+
 class Event( mongo_objects.MongoUserDict ):
+    '''Record information about an upcoming event or presentation'''
+
     database = app.mongo.db
     collection_name = 'events'
 
@@ -105,7 +139,8 @@ class Event( mongo_objects.MongoUserDict ):
 
 
     def createTicket( self, ticketTypeKey, name, autosave=True ):
-        '''Generate a unique key and issue a ticket for the customer'''
+        '''Issue a ticket for the customer.
+        Here we control whether `create()` saves the parent document or not.'''
         return Ticket.create(
             self,
             {
@@ -117,7 +152,8 @@ class Event( mongo_objects.MongoUserDict ):
 
 
     def createTicketType( self, subdoc ):
-        '''Generate a unique key and save this new ticket type subdocument'''
+        '''Save a new ticket type subdocument.
+        `create()` will automatically save the parent document by default.'''
         return TicketType.create( self, subdoc )
 
 
@@ -126,11 +162,11 @@ class Event( mongo_objects.MongoUserDict ):
 
 
     def getTicket( self, key ):
-        return Ticket.getProxy( self, key )
+        return Ticket.get_proxy( self, key )
 
 
     def getTickets( self ):
-        return Ticket.getProxies( self )
+        return Ticket.get_proxies( self )
 
 
     def getTicketsByType( self, ticketTypeKey ):
@@ -142,11 +178,19 @@ class Event( mongo_objects.MongoUserDict ):
 
 
     def getTicketTypes( self ):
-        return TicketType.getProxies( self )
+        return TicketType.get_proxies( self )
+
+
+    def getVenue( self ):
+        return Venue( self )
 
 
     def hasTicketTypes( self ):
         return len( self.getTicketTypes() ) > 0
+
+
+    def hasVenue( self ):
+        return Venue.exists( self )
 
 
     def isFutureEvent( self ):
@@ -155,13 +199,25 @@ class Event( mongo_objects.MongoUserDict ):
 
 
     def isSoldOut( self ):
-        '''Return True if any tickets of any type are available for this event'''
+        '''Return False if any tickets of any type are available for this event'''
         return (self.ticketsAvailable() == 0)
 
 
     @classmethod
+    def loadBenefitById( cls, benefitId ):
+        '''Load by generic benefitId, although the returned object
+        will be either a Feature or a Gift as appropriate.'''
+        return cls.load_proxy_by_id( benefitId, TicketType, Benefit )
+
+
+    @classmethod
     def loadTicketTypeById( cls, ticketTypeId ):
-        return cls.loadProxyById( ticketTypeId, TicketType )
+        return cls.load_proxy_by_id( ticketTypeId, TicketType )
+
+
+    @classmethod
+    def loadVenueById( cls, venueId ):
+        return cls.load_proxy_by_id( venueId, Venue )
 
 
     def ticketsAvailable( self ):
@@ -171,8 +227,7 @@ class Event( mongo_objects.MongoUserDict ):
 
     def ticketsSold( self ):
         '''Return the number of tickets sold across all types for this event'''
-        # We could theoretically just check the length of the tickets container list
-        # This method weeds out any bad data from invalid ticket type keys
+        # We could also just check the length of the tickets container list
         return sum( [ tt.ticketsSold() for tt in self.getTicketTypes() ] )
 
 
@@ -182,9 +237,65 @@ class Event( mongo_objects.MongoUserDict ):
 
 
 
+################################################################################
+# Forms
+################################################################################
+
+class CreateUpdateEventForm( FlaskForm ):
+    name = StringField( 'Name', validators=[DataRequired(), Length(max=50)] )
+    updated = HiddenField( 'Updated' )
+    description = TextAreaField( 'Description', validators=[DataRequired()])
+    eventDate = DateField( 'Date', validators=[DataRequired()] )
+    submitButton = SubmitField( 'Create Event' )
 
 
-# Implementation functions for routes
+class CreateUpdateFeatureForm( FlaskForm ):
+    name = StringField( 'Name', validators=[DataRequired(), Length(max=50)] )
+    updated = HiddenField( 'Updated' )
+    description = TextAreaField( 'Description', validators=[DataRequired()])
+    submitButton = SubmitField( 'Add Gift' )
+
+
+class CreateUpdateGiftForm( FlaskForm ):
+    name = StringField( 'Name', validators=[DataRequired(), Length(max=50)] )
+    updated = HiddenField( 'Updated' )
+    description = TextAreaField( 'Description', validators=[DataRequired()])
+    value = IntegerField( 'Value', validators=[DataRequired()] )
+    submitButton = SubmitField( 'Add Gift' )
+
+
+class CreateUpdateTicketTypeForm( FlaskForm ):
+    name = StringField( 'Name', validators=[DataRequired(), Length(max=50)] )
+    updated = HiddenField( 'Updated' )
+    description = TextAreaField( 'Description', validators=[DataRequired()])
+    ticketsTotal = IntegerField( 'Total Tickets Available', validators=[DataRequired(), NumberRange(min=0)], default=0 )
+    cost = IntegerField( 'Cost', validators=[DataRequired()] )
+    submitButton = SubmitField( 'Create Event' )
+
+
+class CreateUpdateVenueForm( FlaskForm ):
+    name = StringField( 'Name', validators=[DataRequired(), Length(max=50)] )
+    updated = HiddenField( 'Updated' )
+    address = TextAreaField( 'Address', validators=[DataRequired()])
+    phone = StringField( 'Phone', validators=[DataRequired(), Length(max=20)] )
+    submitButton = SubmitField( 'Create Venue' )
+
+
+class ConfirmForm( FlaskForm ):
+    updated = HiddenField( 'Updated' )
+    submitButton = SubmitField( 'Confirm' )
+
+
+class CustomerPurchaseForm( FlaskForm ):
+    ticketTypeId = HiddenField( 'Ticket Type ID' )
+    name = StringField( 'Name', validators=[DataRequired(), Length(max=50)] )
+    submitButton = SubmitField( 'Confirm' )
+
+
+
+################################################################################
+# Routes / Implementation
+################################################################################
 
 @app.route('/admin-create-event', methods=['GET', 'POST'])
 def adminCreateEvent():
@@ -207,13 +318,66 @@ def adminCreateEvent():
 
 
 
+@app.route('/admin-create-feature/<ticketTypeId>', methods=['GET', 'POST'])
+def adminCreateFeature( ticketTypeId ):
+    '''Add a feature to a ticket type.'''
+
+    # Try to locate the existing ticket type
+    try:
+        ticketType = Event.loadTicketTypeById( ticketTypeId )
+        assert ticketType is not None
+    except:
+        flash( 'Unable to locate the requested ticket type. Please try again' )
+        return redirect( url_for( 'adminEventList') )
+
+    form = CreateUpdateFeatureForm()
+    if request.method == 'POST':
+        if form.validate():
+            feature = Feature.create( ticketType, {
+                'name' : form.name.data,
+                'description' : form.description.data,
+            } )
+            flash( f'Added feature "{feature['name']}"' )
+            return redirect( url_for( 'adminTicketDetail', ticketTypeId=ticketType.id() ) )
+
+    return render_template( 'create-update-feature.jinja', form=form, ticketType=ticketType )
+
+
+
+@app.route('/admin-create-gift/<ticketTypeId>', methods=['GET', 'POST'])
+def adminCreateGift( ticketTypeId ):
+    '''Add a gift to a ticket type.'''
+
+    # Try to locate the existing ticket type
+    try:
+        ticketType = Event.loadTicketTypeById( ticketTypeId )
+        assert ticketType is not None
+    except:
+        flash( 'Unable to locate the requested ticket type. Please try again' )
+        return redirect( url_for( 'adminEventList') )
+
+    form = CreateUpdateGiftForm()
+    if request.method == 'POST':
+        if form.validate():
+            gift = Gift.create( ticketType, {
+                'name' : form.name.data,
+                'description' : form.description.data,
+                'value' : form.value.data,
+            } )
+            flash( f'Added gift "{gift['name']}"' )
+            return redirect( url_for( 'adminTicketDetail', ticketTypeId=ticketType.id() ) )
+
+    return render_template( 'create-update-gift.jinja', form=form, ticketType=ticketType )
+
+
+
 @app.route('/admin-create-ticket-type/<eventId>', methods=['GET', 'POST'])
 def adminCreateTicketType( eventId ):
     '''Create a new ticket type for an existing event'''
 
     # Try to locate the existing event
     try:
-        event = Event.loadById( eventId )
+        event = Event.load_by_id( eventId )
         assert event is not None
     except:
         flash( 'Unable to locate the requested event. Please try again' )
@@ -228,7 +392,6 @@ def adminCreateTicketType( eventId ):
                 'cost' : form.cost.data,
                 'ticketsTotal' : form.ticketsTotal.data,
             } )
-            event.save()
             flash( f'Created new ticket type "{form.name.data}"' )
             return redirect( url_for( 'adminEventDetail', eventId=eventId ) )
 
@@ -236,34 +399,95 @@ def adminCreateTicketType( eventId ):
 
 
 
-@app.route('/admin-delete-event/<eventId>', methods=['GET', 'POST'])
-def adminDeleteEvent( eventId ):
-    '''Delete an event'''
+@app.route('/admin-create-venue/<eventId>', methods=['GET', 'POST'])
+def adminCreateVenue( eventId ):
+    '''Add venue information to an event.'''
+
     # Try to locate the existing event
     try:
-        event = Event.loadById( eventId )
+        event = Event.load_by_id( eventId )
+        assert event is not None
+    except:
+        flash( 'Unable to locate the requested event. Please try again' )
+        return redirect( url_for( 'adminEventList') )
+
+    form = CreateUpdateVenueForm()
+    if request.method == 'POST':
+        if form.validate():
+            venue = Venue.create( event, {
+                'name' : form.name.data,
+                'address' : form.address.data,
+                'phone' : form.phone.data,
+            } )
+            venue.save()
+            flash( f'Added venue information' )
+            return redirect( url_for( 'adminEventDetail', eventId=event.id() ) )
+
+    return render_template( 'create-update-venue.jinja', form=form, event=event )
+
+
+
+@app.route('/admin-delete-benefit/<benefitId>', methods=['POST'])
+def adminDeleteBenefit( benefitId ):
+    '''Delete a Benefit subclass, either a Feature or a Gift.
+    This is a post-only page from the adminUpdateFeature and
+    adminUpdateGift pages'''
+    # Try to locate the benefit
+    try:
+        benefit = Event.loadBenefitById( benefitId )
+        ticketType = benefit.parent
+    except:
+        flash( 'Unable to locate the requested benefit information. Please try again' )
+        return redirect( url_for( 'adminEventList') )
+
+    form = ConfirmForm()
+    if form.validate():
+        # Preserve the name as the proxy data won't be
+        # available once it is deleted
+        name = benefit['name']
+        benefit.delete()
+        flash( f"Deleted {name} information" )
+    else:
+        flash( f"Unable to delete {name} information" )
+
+    return redirect( url_for( 'adminTicketDetail', ticketTypeId=ticketType.id() ) )
+
+
+
+@app.route('/admin-delete-event/<eventId>', methods=['POST'])
+def adminDeleteEvent( eventId ):
+    '''Delete an event. This is a post-only page from the
+    adminUpdateEvent page'''
+    # Try to locate the existing event
+    try:
+        event = Event.load_by_id( eventId )
         assert event is not None
     except:
         flash( 'Unable to locate the requested event. Please try again' )
         return redirect( url_for( 'adminEventList') )
 
     form = ConfirmForm()
-    if request.method == 'POST':
-        if form.validate():
-            event.delete()
-            flash( f"Deleted event \"{event['name']}\"" )
-            return redirect( url_for( 'adminEventList' ) )
+    if form.validate():
+        # MongoUserDict objects retain all values (except _id)
+        # after deletion
+        event.delete()
+        flash( f"Deleted event \"{event['name']}\"" )
+        return redirect( url_for( 'adminEventList' ) )
 
-    return render_template( 'admin-delete-event.jinja', event=event, form=form )
+    else:
+        flash( f"Unable to delete event \"{event['name']}\"" )
+        return redirect( url_for( 'adminEventDetail', eventId=event.id() ) )
 
 
 
-@app.route('/admin-delete-ticket-type/<ticketTypeId>', methods=['GET', 'POST'])
+@app.route('/admin-delete-ticket-type/<ticketTypeId>', methods=['POST'])
 def adminDeleteTicketType( ticketTypeId ):
-    '''Delete a ticket type.'''
-    # Locate the existing ticket type within its event
+    '''Delete a ticket type from an event. This is a post-only
+    page from the adminUpdateTicketType page'''
+    # Try to locate the existing ticket type
     try:
         ticketType = Event.loadTicketTypeById( ticketTypeId )
+        event = ticketType.parent
     except:
         flash( 'Unable to locate the requested ticket type. Please try again' )
         return redirect( url_for( 'adminEventList') )
@@ -271,25 +495,42 @@ def adminDeleteTicketType( ticketTypeId ):
     # Make sure no tickets of this type have been sold
     if ticketType.ticketsSold() > 0:
         flash( f"{ticketType['name']} have already been sold. The ticket type can't be deleted." )
-        return redirect( url_for( 'adminEventDetail', eventId=ticketType.parent.id() ) )
+        return redirect( url_for( 'adminEventDetail', eventId=event.id() ) )
 
     form = ConfirmForm()
-    if request.method == 'POST':
-        if form.validate():
-            # Verify the document hasn't been updated in the meantime
-            # If so, redirect back to this page with a GET so we reload the data
-            if ticketType.parent['_updated'].isoformat() != form.updated.data:
-                flash( 'The ticket type has been updated elsewhere. Please check your changes.' )
-                return redirect( url_for( 'adminUpdateEvent', eventId=ticketType.parent.id() ) )
+    if form.validate():
+        # Preserve the name as the data in the proxy
+        # won't exist once it is deleted
+        name = ticketType['name']
+        ticketType.delete()
+        flash( f'Deleted ticket type "{name}"' )
+    else:
+        flash( f'Unable to delete ticket type "{name}"' )
 
-            name = ticketType['name']
-            ticketType.delete()
-            flash( f'Deleted ticket type "{name}"' )
-            return redirect( url_for( 'adminEventDetail', eventId=ticketType.parent.id() ) )
+    return redirect( url_for( 'adminEventDetail', eventId=event.id() ) )
 
-    # Save the timestamp of current document for later reference
-    form.updated.process_data( ticketType.parent['_updated'].isoformat() )
-    return render_template( 'admin-delete-ticket-type.jinja', ticketType=ticketType, form=form )
+
+
+@app.route('/admin-delete-venue/<venueId>', methods=['POST'])
+def adminDeleteVenue( venueId ):
+    '''Delete venue information for an event. This is a post-only
+    page from the adminUpdateVenue page'''
+    # Try to locate the existing venue
+    try:
+        venue = Event.loadVenueById( venueId )
+        event = venue.parent
+    except:
+        flash( 'Unable to locate the requested venue information. Please try again' )
+        return redirect( url_for( 'adminEventList') )
+
+    form = ConfirmForm()
+    if form.validate():
+        venue.delete()
+        flash( f"Deleted venue information" )
+    else:
+        flash( f"Unable to delete venue information" )
+
+    return redirect( url_for( 'adminEventDetail', eventId=event.id() ) )
 
 
 
@@ -298,7 +539,7 @@ def adminEventDetail( eventId ):
     '''Display event information as an administrator'''
     # Try to locate the existing event
     try:
-        event = Event.loadById( eventId )
+        event = Event.load_by_id( eventId )
         assert event is not None
     except:
         flash( 'Unable to locate the requested event. Please try again' )
@@ -315,17 +556,18 @@ def adminEventList():
 
 
 
-@app.route('/admin-ticket-list/<ticketTypeId>')
-def adminTicketList( ticketTypeId ):
+@app.route('/admin-ticket-detail/<ticketTypeId>')
+def adminTicketDetail( ticketTypeId ):
     '''List all tickets of a specific type'''
     # Locate the existing ticket type within its event
     try:
         ticketType = Event.loadTicketTypeById( ticketTypeId )
+        assert ticketType is not None
     except:
         flash( 'Unable to locate the requested ticket type. Please try again' )
         return redirect( url_for( 'adminEventList') )
 
-    return render_template( 'admin-ticket-list.jinja', ticketType=ticketType )
+    return render_template( 'admin-ticket-detail.jinja', ticketType=ticketType )
 
 
 
@@ -334,7 +576,7 @@ def adminUpdateEvent( eventId ):
     '''Update an existing event'''
     # Try to locate the existing event
     try:
-        event = Event.loadById( eventId )
+        event = Event.load_by_id( eventId )
         assert event is not None
     except:
         flash( 'Unable to locate the requested event. Please try again' )
@@ -351,27 +593,120 @@ def adminUpdateEvent( eventId ):
 
             # Update event document with new data
             ed = form.eventDate.data
+            # update() is just the plain vanilla dictionary function
             event.update( {
                 'name' : form.name.data,
                 'description' : form.description.data,
                 'eventDate' : datetime( ed.year, ed.month, ed.day ),
             } )
+            # We need to save the updated event ourselves
             event.save()
             flash( f'Updated event "{form.name.data}"' )
-            return redirect( url_for( 'adminEventDetail', eventId=event['_id'] ) )
+            return redirect( url_for( 'adminEventDetail', eventId=event.id() ) )
 
     # Save the timestamp of current document for later reference
     form.updated.process_data( event['_updated'].isoformat() )
-    return render_template( 'create-update-event.jinja', eventId=eventId, form=form )
+    return render_template(
+        'create-update-event.jinja',
+        delform=ConfirmForm(),
+        event=event,
+        form=form,
+    )
+
+
+
+@app.route('/admin-update-feature/<featureId>', methods=['GET', 'POST'])
+def adminUpdateFeature( featureId ):
+    '''Update an existing feature'''
+    # Locate the existing feature within its ticket type and event
+    try:
+        feature = Event.loadBenefitById( featureId )
+        ticketType = feature.parent
+        event = ticketType.parent
+    except:
+        flash( 'Unable to locate the requested feature. Please try again' )
+        return redirect( url_for( 'adminEventList') )
+
+    form = CreateUpdateFeatureForm( data=feature.data() )
+    if request.method == 'POST':
+        if form.validate():
+            # Verify the document hasn't been updated in the meantime
+            # If so, redirect back to this page with a GET so we reload the data
+            if event['_updated'].isoformat() != form.updated.data:
+                flash( 'The event has been updated elsewhere. Please check your changes.' )
+                return redirect( url_for( 'adminUpdateTicketType', ticketTypeId=ticketType.id() ) )
+
+            # Update ticket type proxy document with new data
+            feature.update( {
+                'name' : form.name.data,
+                'description' : form.description.data,
+            } )
+            # Saving the proxy saves the entire parent document
+            feature.save()
+            flash( f'Updated feature "{form.name.data}"' )
+            return redirect( url_for( 'adminTicketDetail', ticketTypeId=ticketType.id() ) )
+
+    # Save the timestamp of current document for later reference
+    form.updated.process_data( event['_updated'].isoformat() )
+    return render_template(
+        'create-update-feature.jinja',
+        delform=ConfirmForm(),
+        feature=feature,
+        form=form,
+    )
+
+
+
+@app.route('/admin-update-gift/<giftId>', methods=['GET', 'POST'])
+def adminUpdateGift( giftId ):
+    '''Update an existing gift'''
+    # Locate the existing gift within its ticket type and event
+    try:
+        gift = Event.loadBenefitById( giftId )
+        ticketType = gift.parent
+        event = ticketType.parent
+    except:
+        flash( 'Unable to locate the requested gift. Please try again' )
+        return redirect( url_for( 'adminEventList') )
+
+    form = CreateUpdateGiftForm( data=gift.data() )
+    if request.method == 'POST':
+        if form.validate():
+            # Verify the document hasn't been updated in the meantime
+            # If so, redirect back to this page with a GET so we reload the data
+            if event['_updated'].isoformat() != form.updated.data:
+                flash( 'The event has been updated elsewhere. Please check your changes.' )
+                return redirect( url_for( 'adminUpdateTicketType', ticketTypeId=ticketType.id() ) )
+
+            # Update ticket type proxy document with new data
+            gift.update( {
+                'name' : form.name.data,
+                'description' : form.description.data,
+                'value' : form.value.data,
+            } )
+            # Saving the proxy saves the entire parent document
+            gift.save()
+            flash( f'Updated gift "{form.name.data}"' )
+            return redirect( url_for( 'adminTicketDetail', ticketTypeId=ticketType.id() ) )
+
+    # Save the timestamp of current document for later reference
+    form.updated.process_data( event['_updated'].isoformat() )
+    return render_template(
+        'create-update-gift.jinja',
+        delform=ConfirmForm(),
+        gift=gift,
+        form=form,
+    )
 
 
 
 @app.route('/admin-update-ticket-type/<ticketTypeId>', methods=['GET', 'POST'])
 def adminUpdateTicketType( ticketTypeId ):
-    '''Update an existing event'''
+    '''Update an existing ticket type'''
     # Locate the existing ticket type within its event
     try:
         ticketType = Event.loadTicketTypeById( ticketTypeId )
+        event = ticketType.parent
     except:
         flash( 'Unable to locate the requested ticket type. Please try again' )
         return redirect( url_for( 'adminEventList') )
@@ -381,24 +716,72 @@ def adminUpdateTicketType( ticketTypeId ):
         if form.validate():
             # Verify the document hasn't been updated in the meantime
             # If so, redirect back to this page with a GET so we reload the data
-            if ticketType.parent['_updated'].isoformat() != form.updated.data:
-                flash( 'The ticket type has been updated elsewhere. Please check your changes.' )
-                return redirect( url_for( 'adminUpdateEvent', eventId=ticketType.parent.id() ) )
+            if event['_updated'].isoformat() != form.updated.data:
+                flash( 'The event has been updated elsewhere. Please check your changes.' )
+                return redirect( url_for( 'adminUpdateEvent', eventId=event.id() ) )
 
-            # Update event document with new data
+            # Update ticket type proxy document with new data
             ticketType.update( {
                 'name' : form.name.data,
                 'description' : form.description.data,
                 'cost' : form.cost.data,
                 'ticketsTotal' : form.ticketsTotal.data,
             } )
+            # Saving the proxy saves the entire parent document
             ticketType.save()
             flash( f'Updated ticket type "{form.name.data}"' )
-            return redirect( url_for( 'adminEventDetail', eventId=ticketType.parent.id() ) )
+            return redirect( url_for( 'adminEventDetail', eventId=event.id() ) )
 
     # Save the timestamp of current document for later reference
-    form.updated.process_data( ticketType.parent['_updated'].isoformat() )
-    return render_template( 'create-update-ticket-type.jinja', ticketType=ticketType, form=form )
+    form.updated.process_data( event['_updated'].isoformat() )
+    return render_template(
+        'create-update-ticket-type.jinja',
+        delform=ConfirmForm(),
+        form=form,
+        ticketType=ticketType,
+    )
+
+
+
+@app.route('/admin-update-venue/<venueId>', methods=['GET', 'POST'])
+def adminUpdateVenue( venueId ):
+    '''Add venue information to an event.'''
+    # Try to locate the existing event
+    try:
+        venue = Event.loadVenueById( venueId )
+        assert venue is not None
+    except Exception as e:
+        flash( 'Unable to locate the requested venue. Please try again' )
+        print( f"Exception {e}" )
+        return redirect( url_for( 'adminEventList') )
+
+    form = CreateUpdateVenueForm( data=venue )
+    if request.method == 'POST':
+        if form.validate():
+            # Verify the document hasn't been updated in the meantime
+            # If so, redirect back to this page with a GET so we reload the data
+            if venue.parent['_updated'].isoformat() != form.updated.data:
+                flash( 'The event has been updated elsewhere. Please check your changes.' )
+                return redirect( url_for( 'adminUpdateEvent', eventId=venue.parent.id() ) )
+
+            venue.update( {
+                'name' : form.name.data,
+                'address' : form.address.data,
+                'phone' : form.phone.data,
+            } )
+            # We need to save the updated data ourselves
+            venue.save()
+            flash( f'Updated venue information for event "{venue.parent['name']}"' )
+            return redirect( url_for( 'adminEventDetail', eventId=venue.parent.id() ) )
+
+    # Save the timestamp of current document for later reference
+    form.updated.process_data( venue.parent['_updated'].isoformat() )
+    return render_template(
+        'create-update-venue.jinja',
+        delform=ConfirmForm(),
+        form=form,
+        venue=venue,
+    )
 
 
 
@@ -407,7 +790,7 @@ def customerEventDetail( eventId ):
     '''Display event information as a customer'''
     # Try to locate the existing event
     try:
-        event = Event.loadById( eventId )
+        event = Event.load_by_id( eventId )
         assert event is not None
     except:
         flash( 'Unable to locate the requested event. Please try again' )
@@ -418,7 +801,6 @@ def customerEventDetail( eventId ):
 
 
 @app.route('/customer-event-list')
-@app.route('/')
 def customerEventList():
     '''Loop through the events in the database as a customer'''
     return render_template( 'customer-event-list.jinja', events=Event.find() )
@@ -429,29 +811,31 @@ def customerEventList():
 def customerPurchaseTicket( ticketTypeId ):
     '''Purchase a ticket'''
     # Locate the ticket type within its event
-    # Try a simple assert to make sure the data is valid
     try:
         ticketType = Event.loadTicketTypeById( ticketTypeId )
+        event = ticketType.parent
     except:
         flash( 'Unable to locate the requested ticket type. Please try again' )
         return redirect( url_for( 'customerEventList') )
 
-    # Make sure no tickets of this type have been sold
-    if ticketType.ticketsSold() > ticketType['ticketsTotal']:
+    # Make sure this type of ticket isn't already sold out
+    if ticketType.isSoldOut():
         flash( f"Sorry! {ticketType['name']} are already sold out." )
-        return redirect( url_for( 'customerEventDetail', eventId=ticketType.parent.id() ) )
+        return redirect( url_for( 'customerEventDetail', eventId=event.id() ) )
 
     form = CustomerPurchaseForm()
     if request.method == 'POST':
         if form.validate():
             ticket = ticketType.sell( form.name.data )
-            flash( f"""{ticketType['name']} {ticket.id()} to {ticketType.parent['name']} has been issued for {form.name.data}""" )
+            flash( f"""{ticketType['name']} {ticket.id()} ticket to {event['name']} has been issued for {form.name.data}""" )
+            giftNames = ticketType.giftNames()
+            if len( giftNames ) > 0:
+                flash( f"Don't forget to get your {giftNames}" )
             return redirect( url_for( 'customerEventList' ) )
 
     return render_template( 'customer-purchase-ticket.jinja', ticketType=ticketType, form=form )
 
 
-
-
-
-
+@app.route('/')
+def indexPage():
+    return render_template( 'index.jinja' )

@@ -1,7 +1,17 @@
+{# This template is included as part of the mongo_objects sample app
+ #
+ # https://mongo-objects.headwaters.com.sg
+ # https://pypi.org/project/mongo-objects/
+ #
+ # Copyright 2024 Jonathan Lindstrom
+ # Headwaters Entrepreneurs Pte Ltd
+ #
+ # Released under the MIT License
+-#}
+
 {% extends "base.jinja" %}
 
-{% set title = "Events" %}
-{% set iteration = 5 %}
+{% set title = "Event List - Customer Mode" %}
 {% set mode = "customer" %}
 
 {% block content %}
@@ -10,7 +20,9 @@
 {% for event in events|sort(attribute="eventDate", reverse=True) %}
 <div class="my-3">
     <label><a href="{{ url_for('customerEventDetail', eventId=event.id()) }}" style="font-weight: bold;">{{ event['name'] }}</a></label>
-    <div>{{ event['description'] }}</div>
+    <div>
+        {% if event.hasVenue() %}<span style="font-style: italic;">{{ event.getVenue()['name'] }}</span><br>{% endif %}
+        {{ event['description'] }}</div>
     {% if event.isFutureEvent() %}
         {% if event.isSoldOut() %}
     <div>{{ event.displayDate() }}<br><span style="color: red;">Sold Out!</span></div>
@@ -26,5 +38,4 @@
 <p>No events have been scheduled</p>
 {% endfor %}
 
-<p style="margin-top: 3em; font-size: 80%;">Switch to the <a href="{{ url_for( 'adminEventList' ) }}">admin view</a>.
 {% endblock %}

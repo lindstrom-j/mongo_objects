@@ -1,0 +1,101 @@
+{# This template is included as part of the mongo_objects sample app
+ #
+ # https://mongo-objects.headwaters.com.sg
+ # https://pypi.org/project/mongo-objects/
+ #
+ # Copyright 2024 Jonathan Lindstrom
+ # Headwaters Entrepreneurs Pte Ltd
+ #
+ # Released under the MIT License
+-#}
+
+{% extends "base.jinja" %}
+
+{% set event = ticketType.parent %}
+
+{% set title = ticketType.name %}
+{% set mode = "admin" %}
+
+{% block content %}
+<h1 class="mt-4">{{ ticketType.name }} <a href="{{ url_for('adminUpdateTicketType', ticketTypeId=ticketType.id()) }}" class="header-update-link">(update)</a></h1>
+<div class="my-2">
+    <dl>
+        <dt>Event</dt>
+        <dd>{{ event['name'] }}</dd>
+        <dt>Event date</dt>
+        <dd>{{ event.displayDate() }}</dd>
+        <dt>Ticket Description</dt>
+        <dd>{{ ticketType['description'] }}</dd>
+
+        <dt>Features</dt>
+        <dd>
+        {% for feature in ticketType.getFeatures() %}
+            {% if loop.first %}
+            <dl>
+            {% endif %}
+                <dt>
+                    {{ feature['name'] }}
+                    <a href="{{ url_for( 'adminUpdateFeature', featureId=feature.id() ) }}" class="hover-update-link">update</a>
+                </dt>
+                <dd>{{ feature['description'] }}</dd>
+            {% if loop.last %}
+            </dl>
+            {% endif %}
+        {% else %}
+            No features have been added to this ticket type<br>
+        {% endfor %}
+        <a href="{{ url_for( 'adminCreateFeature', ticketTypeId=ticketType.id() ) }}" class="update-link">⊕ add a feature</a>
+        </dd>
+
+        <dt>Bonus Gifts</dt>
+        <dd>
+        {% for gift in ticketType.getGifts() %}
+            {% if loop.first %}
+            <dl>
+            {% endif %}
+                <dt>
+                    {{ gift['name'] }}
+                    <a href="{{ url_for( 'adminUpdateGift', giftId=gift.id() ) }}" class="hover-update-link">update</a>
+                </dt>
+                <dd>
+                    {{ gift['description'] }} (worth {{ gift['value'] }})
+                </dd>
+            {% if loop.last %}
+            </dl>
+            {% endif %}
+        {% else %}
+            No gifts have been added to this ticket type<br>
+        {% endfor %}
+        <a href="{{ url_for( 'adminCreateGift', ticketTypeId=ticketType.id() ) }}" class="update-link">⊕ add a gift</a>
+        </dd>
+    </dl>
+</div>
+<div class="my-2">
+    <h4>Tickets Issued</h4>
+    {% for ticket in ticketType.getTickets() %}
+        {% if loop.first %}
+        <table>
+            <thead>
+                <th class="pe-3">Ticket Number</th>
+                <th class="px-3">Name</th>
+                <th class="ps-3">Issued</th>
+            </thead>
+            <tbody>
+        {% endif %}
+                <tr>
+                    <td class="pe-3">{{ ticket.id() }}</td>
+                    <td class="px-3">{{ ticket.name }}</td>
+                    <td class="ps-3">{{ ticket.displayIssuedTime() }}</td>
+                </tr>
+        {% if loop.last %}
+            </tbody>
+        </table>
+        {% endif %}
+    {% else %}
+    <p>No tickets have been issued.</p>
+    {% endfor %}
+</div>
+<div class="mt-4">
+    <a href="{{ url_for('adminEventDetail', eventId=event.id()) }}" role="button" class="btn btn-primary btn-sm">Back To Event</a>
+</div>
+{% endblock %}

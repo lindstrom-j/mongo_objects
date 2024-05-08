@@ -1,41 +1,60 @@
+{# This template is included as part of the mongo_objects sample app
+ #
+ # https://pypi.org/project/mongo-objects/
+ #
+ # Copyright 2024 Jonathan Lindstrom
+ # Headwaters Entrepreneurs Pte Ltd
+ # https://headwaters.com.sg
+ #
+ # Released under the MIT License
+-#}
+
 {% extends "base.jinja" %}
 
 {% set title = event.name %}
-{% set iteration = 5 %}
 {% set mode = "admin" %}
 
 
 {% block content %}
-<h1 class="mt-4">{{ title }}</h1>
+<h1 class="mt-4">{{ title }} <a href="{{ url_for('adminUpdateEvent', eventId=event.id()) }}" class="header-update-link">(update)</a></h1>
 <div class="my-2">
-    {{ event.description }}
-</div>
-<div class="my-2">
-    <label class="datalabel">Event date</label>
-    {{ event.displayDate() }}
-</div>
-<div class="my-2">
-    <label class="datalabel">Tickets</label>
+    <dl>
+        <dt>Description</dt>
+        <dd>{{ event.description }}</dd>
+        <dt>Event date</dt>
+        <dd>{{ event.displayDate() }}</dd>
+        {% if event.hasVenue() %}
+        {% set venue = event.getVenue() %}
+        <dt>Venue
+            <a href="{{ url_for('adminUpdateVenue', venueId=event.getVenue().id()) }}" class="update-link">(update)</a>
+        </dt>
+        <dd>
+        {{ venue['name'] }}<br>
+        {{ venue['address'].splitlines()|join('<br>') }}<br>
+        {{ venue['phone'] }}<br>
+        </dd>
+    {% else %}
+        <dt>Venue</dt>
+        <dd>
+            Venue information not provided<br>
+            <a href="{{ url_for('adminCreateVenue', eventId=event.id()) }}" class="update-link">⊕ add venue information</a>
+        </dd>
+    {% endif %}
+        <dt>Tickets</dt>
     {% for ticketType in event.getTicketTypes() %}
         {% if loop.first %}
+        <dd>
         <table>
             <tbody>
         {% endif %}
                 <tr>
-                    <td class="pe-3">{{ ticketType.name }}</td>
+                    <td class="pe-3"><a href="{{ url_for('adminTicketDetail', ticketTypeId=ticketType.id()) }}">{{ ticketType.name }}</a></td>
                     <td class="px-3">{{ ticketType.description }}</td>
-                    <td class="px-3">￥{{ ticketType.cost }}</td>
-                    <td class="px-3">{{ticketType.ticketsSold() }} of {{ticketType.ticketsTotal }} sold
+                    <td class="px-3">{{ ticketType.cost }}</td>
+                    <td class="px-3">
+                        {{ticketType.ticketsSold() }} of {{ticketType.ticketsTotal }} sold
                         {% if ticketType.isSoldOut() %}
                         <br><span style="color: red;">Sold Out!</span>
-                        {% endif %}
-                    </td>
-                    <td class="ps-3">
-                        <a href="{{ url_for('adminUpdateTicketType', ticketTypeId=ticketType.id()) }}" role="button" class="btn btn-outline-primary btn-sm">Update</a>
-                        {% if ticketType.ticketsSold() == 0 %}
-                        <a href="{{ url_for('adminDeleteTicketType', ticketTypeId=ticketType.id()) }}" role="button" class="btn btn-outline-primary btn-sm">Delete</a>
-                        {% else %}
-                        <a href="{{ url_for('adminTicketList', ticketTypeId=ticketType.id()) }}" role="button" class="btn btn-outline-primary btn-sm">Tickets</a>
                         {% endif %}
                     </td>
                 </tr>
@@ -55,15 +74,22 @@
             {% endif %}
             </tbody>
         </table>
+        <a href="{{ url_for( 'adminCreateTicketType', eventId=event.id() ) }}" class="update-link">⊕ add a ticket type</a>
+        </dd>
         {% endif %}
     {% else %}
-    <p>No ticket types have been defined.</p>
+    <dd>No ticket types have been defined.<br>
+    <a href="{{ url_for( 'adminCreateTicketType', eventId=event.id() ) }}" class="update-link">⊕ add a ticket type</a>
+    </dd>
     {% endfor %}
+    </dl>
 </div>
 <div class="mt-4">
-    <a href="{{ url_for('adminUpdateEvent', eventId=event.id()) }}" role="button" class="btn btn-outline-primary btn-sm">Update Event</a>
-    <a href="{{ url_for('adminDeleteEvent', eventId=event.id()) }}" role="button" class="btn btn-outline-primary btn-sm">Delete Event</a>
-    <a href="{{ url_for( 'adminCreateTicketType', eventId=event.id() ) }}" role="button" class="btn btn-outline-primary btn-sm">New Ticket Type</a>
-    <a href="{{ url_for('adminEventList') }}" role="button" class="btn btn-primary btn-sm">Back</a>
+    {% if event.hasVenue() %}
+        <a href="{{ url_for('adminUpdateVenue', venueId=event.getVenue().id()) }}" role="button" class="btn btn-outline-primary btn-sm">Update Venue</a>
+    {% else %}
+        <a href="{{ url_for('adminCreateVenue', eventId=event.id()) }}" role="button" class="btn btn-outline-primary btn-sm">Add Venue</a>
+    {% endif %}
+    <a href="{{ url_for('adminEventList') }}" role="button" class="btn btn-primary btn-sm">Back To Event List</a>
 </div>
 {% endblock %}

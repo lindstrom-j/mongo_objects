@@ -2,8 +2,8 @@
 
 # assume this script is at the same level as the sample application
 cd $(dirname $0)
-PROJECT_DIR=$(pwd)
-VENV_DIR=${PROJECT_DIR}/venv
+SAMPLE_DIR=$(pwd)
+VENV_DIR=${SAMPLE_DIR}/venv
 
 # if a virtual environment doesn't exist, create one
 if [[ ! -d venv ]]; then
@@ -16,7 +16,7 @@ source ${VENV_DIR}/bin/activate
 echo "activated mongo_objects sample app virtual environment"
 
 # add any required modules
-cat ${PROJECT_DIR}/requirements.txt | xargs ${VENV_DIR}/bin/pip3 install --disable-pip-version-check
+cat ${SAMPLE_DIR}/requirements.txt | xargs ${VENV_DIR}/bin/pip3 install --disable-pip-version-check
 echo "installed required modules for mongo_objects sample app virtual environment"
 
 # create MongoDB directory if it doesn't exist
@@ -37,7 +37,7 @@ STARTED_MONGO_PID=$!
 echo Started MongoDB PID $STARTED_MONGO_PID
 
 # set up environment
-export PYTHONPATH=${PROJECT_DIR}:$PYTHONPATH
+export PYTHONPATH=${SAMPLE_DIR}:${SAMPLE_DIR}/../src:$PYTHONPATH
 export FLASK_APP=mongo_objects_sample
 export FLASK_DEBUG=1
 

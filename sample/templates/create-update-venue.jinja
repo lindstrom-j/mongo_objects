@@ -12,12 +12,14 @@
 {% extends "base.jinja" %}
 {% import "form-tools.jinja" as formTools %}
 
-{# We use the existence of an event object to decide
- # if we are updating an existing event or creating a new one #}
-{% if event is defined %}
-    {% set title = "Update Event" %}
+{# Either a venue or event object must be provided.
+ # We use the existence of a venue object to decide
+ # if we are updating an existing venue or creating a new one #}
+{% if venue is defined %}
+    {% set title = "Update Venue Info" %}
+    {% set event = venue.parent %}
 {% else %}
-    {% set title = "Create Event" %}
+    {% set title = "Add Venue Info" %}
 {% endif %}
 
 {% set mode = "admin" %}
@@ -26,20 +28,21 @@
 {% block content %}
 <h1 class="mt-4">{{ title }}</h1>
 <form class="mb-3" action="" method="post">
+<div class="my-2">{{ event['name'] }}</div>
 {{ form.hidden_tag() }}
 {{ formTools.displayField( form.name ) }}
-{{ formTools.displayField( form.description ) }}
-{{ formTools.displayField( form.eventDate) }}
+{{ formTools.displayField( form.address ) }}
+{{ formTools.displayField( form.phone ) }}
 
-{# Existing events can be deleted as well as updated #}
-{% if event is defined %}
+{# Existing venue information can be deleted as well as updated #}
+{% if venue is defined %}
     <div class="mb-3">
         <a href="{{ url_for( 'adminEventDetail', eventId=event.id() ) }}" class="btn btn-outline-primary">Cancel</a>
-        <button onclick="display_delete_modal()" type="button" class="btn btn-outline-primary">Delete Event</button>
+        <button onclick="display_delete_modal()" type="button" class="btn btn-outline-primary">Delete Venue Info</button>
         {{ form.submitButton( class="btn btn-primary", value=title ) }}
     </div>
 
-{# New events can only be created #}
+{# New venue information can only be added #}
 {% else %}
     <div class="mb-3">
         <a href="url_for( 'adminEventList' )" class="btn btn-outline-primary">Cancel</a>
@@ -48,21 +51,21 @@
 {% endif %}
 </form>
 
-{# Create the modal required to confirm deleting an
- # existing event. #}
-{% if event is defined %}
+{# Create the modal required to confirm deleting
+ # existing venue information. #}
+{% if venue is defined %}
 <div class="modal fade" id="delete-modal" tabindex="-1" aria-labelledby="delete-modal-label" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h1 class="modal-title fs-5" id="delete-modal-label">Delete Event</h1>
+                <h1 class="modal-title fs-5" id="delete-modal-label">Delete Venue Info</h1>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                Are you sure you want to delete "{{ event['name'] }}"?
+                Are you sure you want to delete this venue information for "{{ event['name'] }}"?
             </div>
             <div class="modal-footer">
-                <form class="mb-3" action="{{ url_for( 'adminDeleteEvent', eventId=event.id() ) }}" method="post">
+                <form class="mb-3" action="{{ url_for( 'adminDeleteVenue', venueId=venue.id() ) }}" method="post">
                     {{ delform.hidden_tag() }}
                     {{ delform.submitButton( class="btn btn-primary", value="Delete" ) }}
                     <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>

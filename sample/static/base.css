@@ -1,0 +1,28 @@
+.code {
+    font-family: 'Courier New', Courier, monospace;
+}
+
+.header-update-link {
+    color: darkgray;
+    font-size: 50%;
+    font-style: italic;
+    text-decoration: none;
+}
+
+.update-link {
+    color: darkgray;
+    font-size: 80%;
+    font-style: italic;
+    text-decoration: none;
+}
+
+dt .hover-update-link {
+    color: transparent;
+    font-size: 80%;
+    font-style: italic;
+    text-decoration: none;
+}
+
+dt:hover .hover-update-link {
+    color: darkgray;
+}

@@ -1,9 +1,19 @@
+{# This template is included as part of the mongo_objects sample app
+ #
+ # https://mongo-objects.headwaters.com.sg
+ # https://pypi.org/project/mongo-objects/
+ #
+ # Copyright 2024 Jonathan Lindstrom
+ # Headwaters Entrepreneurs Pte Ltd
+ #
+ # Released under the MIT License
+-#}
+
 {% extends "base.jinja" %}
 {% import "form-tools.jinja" as formTools %}
 
 {% set title = "Confirm Purchase" %}
-{% set iteration = 5 %}
-{% set mode = "admin" %}
+{% set mode = "customer" %}
 
 
 {% block content %}
@@ -15,12 +25,43 @@
 {{ form.hidden_tag() }}
 
 <div class="my-2">
-    <span class="bold">{{ ticketType.name }}</span><br>
-    {{ ticketType.description }}
-</div>
-<div class="my-2">
-    <label class="datalabel">Cost</label>
-    ￥{{ ticketType.cost }}
+    <dl>
+        <dt>Ticket Type</dt>
+        <dd>{{ ticketType.name }}</dd>
+        <dt>Description</dt>
+        <dd>{{ ticketType.description }}</dd>
+        {% for feature in ticketType.getFeatures() %}
+            {% if loop.first %}
+        <dt>Features</dt>
+        <dd>
+            <dl>
+            {% endif %}
+                <dt>{{ feature['name'] }}</dt>
+                <dd>{{ feature['description'] }}</dd>
+            {% if loop.last %}
+            </dl>
+        </dd>
+            {% endif %}
+        {% endfor %}
+
+        {% for gift in ticketType.getGifts() %}
+            {% if loop.first %}
+        <dt>Bonus Gifts</dt>
+        <dd>
+            <dl>
+            {% endif %}
+                <dt>{{ gift['name'] }}</dt>
+                <dd>
+                    {{ gift['description'] }} (worth {{ gift['value'] }})
+                </dd>
+            {% if loop.last %}
+            </dl>
+        </dd>
+            {% endif %}
+        {% endfor %}
+    </dl>
+        <dt>Cost</dt>
+        <dd>{{ ticketType.cost }}</dd>
 </div>
 {{ formTools.displayField( form.name ) }}
 

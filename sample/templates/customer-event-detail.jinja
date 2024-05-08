@@ -1,30 +1,48 @@
+{# This template is included as part of the mongo_objects sample app
+ #
+ # https://mongo-objects.headwaters.com.sg
+ # https://pypi.org/project/mongo-objects/
+ #
+ # Copyright 2024 Jonathan Lindstrom
+ # Headwaters Entrepreneurs Pte Ltd
+ #
+ # Released under the MIT License
+-#}
+
 {% extends "base.jinja" %}
 
 {% set title = event.name %}
-{% set iteration = 5 %}
 {% set mode = "customer" %}
 
 
 {% block content %}
 <h1 class="mt-4">{{ title }}</h1>
 <div class="my-2">
-    {{ event.description }}
-</div>
-<div class="my-2">
-    <label class="datalabel">Event Date</label>
-    <div>{{ event.displayDate() }}</div>
-</div>
-<div class="my-2">
-    <label class="datalabel">Tickets</label>
+    <dl>
+        <dt>Description</dt>
+        <dd>{{ event.description }}</dd>
+        <dt>Event Date</dt>
+        <dd>{{ event.displayDate() }}</dd>
+    {% if event.hasVenue() %}
+        {% set venue = event.getVenue() %}
+        <dt>Venue</dt>
+        <dd>
+            {{ venue['name'] }}<br>
+            {{ venue['address'].splitlines()|join('<br>') }}<br>
+            {{ venue['phone'] }}
+        </dd>
+    {% endif %}
+        <dt>Tickets</dt>
     {% for ticketType in event.getTicketTypes() %}
         {% if loop.first %}
+        <dd>
         <table>
             <tbody>
         {% endif %}
                 <tr>
                     <td class="pe-3">{{ ticketType.name }}</td>
                     <td class="px-3">{{ ticketType.description }}</td>
-                    <td class="px-3">￥{{ ticketType.cost }}</td>
+                    <td class="px-3">{{ ticketType.cost }}</td>
                     <td class="px-3">
                         {% if ticketType.isSoldOut() %}
                         <br><span style="color: red;">Sold Out!</span>
@@ -36,12 +54,14 @@
         {% if loop.last %}
             </tbody>
         </table>
+        </dd>
         {% endif %}
     {% else %}
-    <p>No ticket are available.</p>
+        <dd>No tickets are available.</dd>
     {% endfor %}
+    </dl>
 </div>
 <div class="mt-4">
-    <a href="{{ url_for('customerEventList') }}" role="button" class="btn btn-primary btn-sm">Back</a>
+    <a href="{{ url_for('customerEventList') }}" role="button" class="btn btn-primary btn-sm">Back To Event List</a>
 </div>
 {% endblock %}

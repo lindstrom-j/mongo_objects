@@ -1,17 +1,28 @@
+{# This template is included as part of the mongo_objects sample app
+ #
+ # https://mongo-objects.headwaters.com.sg
+ # https://pypi.org/project/mongo-objects/
+ #
+ # Copyright 2024 Jonathan Lindstrom
+ # Headwaters Entrepreneurs Pte Ltd
+ #
+ # Released under the MIT License
+-#}
+
 {% extends "base.jinja" %}
 {% import "form-tools.jinja" as formTools %}
 
-{# Either a ticketType or an event object must be provided #}
+{# Either a ticketType or event object must be provided.
+ # We use the existence of a ticketType object to decide
+ # if we are updating an existing ticket type or creating a new one #}
 {% if ticketType is defined %}
 {% set title = "Update Ticket Type" %}
-{% set eventId = ticketType.parent.id() %}
+{% set event = ticketType.parent %}
 
 {% else %}
 {% set title = "Create Ticket Type" %}
-{% set eventId = event.id() %}
 {% endif %}
 
-{% set iteration = 5 %}
 {% set mode = "admin" %}
 
 
@@ -23,9 +34,57 @@
 {{ formTools.displayField( form.description ) }}
 {{ formTools.displayField( form.cost ) }}
 {{ formTools.displayField( form.ticketsTotal ) }}
+
+{# Existing ticket type information can be deleted as well as updated #}
+{% if ticketType is defined %}
     <div class="mb-3">
-        <a href="{{ url_for( 'adminEventDetail', eventId=eventId ) }}" class="btn btn-outline-primary">Cancel</a>
+        <a href="{{ url_for('adminTicketDetail', ticketTypeId=ticketType.id()) }}" class="btn btn-outline-primary">Cancel</a>
+        <button onclick="display_delete_modal()" type="button" class="btn btn-outline-primary">Delete Ticket Type</button>
         {{ form.submitButton( class="btn btn-primary", value=title ) }}
     </div>
+
+{# New ticket type information can only be added #}
+{% else %}
+    <div class="mb-3">
+        <a href="{{ url_for( 'adminEventDetail', eventId=event.id() ) }}" class="btn btn-outline-primary">Cancel</a>
+        {{ form.submitButton( class="btn btn-primary", value=title ) }}
+    </div>
+{% endif %}
 </form>
+
+{# Create the modal required to confirm deleting
+ # existing ticket type information. #}
+{% if ticketType is defined %}
+<div class="modal fade" id="delete-modal" tabindex="-1" aria-labelledby="delete-modal-label" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="delete-modal-label">Delete Ticket Type</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete this ticket type from "{{ event['name'] }}"?
+            </div>
+            <div class="modal-footer">
+                <form class="mb-3" action="{{ url_for( 'adminDeleteTicketType', ticketTypeId=ticketType.id() ) }}" method="post">
+                    {{ delform.hidden_tag() }}
+                    {{ delform.submitButton( class="btn btn-primary", value="Delete" ) }}
+                    <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
+
+
+{% block scripts %}
+<script>
+function display_delete_modal() {
+    $('#delete-modal').modal('show');
+    return false;
+}
+</script>
+{% endblock %}
+

@@ -1,0 +1,51 @@
+{# This template is included as part of the mongo_objects sample app
+ #
+ # https://pypi.org/project/mongo-objects/
+ #
+ # Copyright 2024 Jonathan Lindstrom
+ # Headwaters Entrepreneurs Pte Ltd
+ # https://headwaters.com.sg
+ #
+ # Released under the MIT License
+-#}
+
+{% extends "base.jinja" %}
+
+{% set title = "Welcome to mongo_objects" %}
+
+
+{% block content %}
+<h1 class="mt-4">{{ title }}</h1>
+<div class="my-2">
+<p>This sample Flask application manages ticket sales to imaginary events
+to demonstrate the features of the
+<a href="https://mongo-objects.headwaters.com.sg/" class="code" target="_blank">mongo_objects</a> Python module.</p>
+<p>See the <a href="https://mongo-objects.headwaters.com.sg/en/latest/sample.html" target="_blank">Sample Application</a>
+instructions for guidance in exploring this app.</p>
+</div>
+
+<div class="my-2">
+<h2 class="mt-4">Module Features</h2>
+<p><span class="code">mongo_objects</span> allows MongoDB documents to be managed as user-defined
+<a href="https://mongo-objects.headwaters.com.sg/en/latest/MongoUserDict.html" class="code" target="_blank">MongoUserDict</a>
+subclasses of <span class="code">UserDict</span> instead of as just plain dictionaries.</p>
+
+<p><span class="code">mongo_objects</span> also provides proxy objects to manages the
+subdocuments within each document, whether single dictionaries
+(<a href="https://mongo-objects.headwaters.com.sg/en/latest/MongoSingleProxy.html" class="code" target="_blank">MongoSingleProxy</a>),
+dictionaries of dictionaries
+(<a href="https://mongo-objects.headwaters.com.sg/en/latest/MongoDictProxy.html" class="code" target="_blank">MongoDictProxy</a>),
+or lists of dictionaries
+(<a href="https://mongo-objects.headwaters.com.sg/en/latest/MongoListProxy.html" class="code" target="_blank">MongoListProxy</a>).</p>
+</div>
+
+<div class="my-2">
+<h2 class="mt-4">Using The Sample App</h2>
+<p>The application had two modes. <a href="{{ url_for('adminEventList') }}">Admin mode</a>
+allows you to schedule events, add venue information, create multiple types of tickets
+and review the tickets sold.</p>
+<p><a href="{{ url_for('customerEventList') }}">Customer mode</a> allows imaginary
+customers to purchase the various types of tickets.</p>
+<p>Switch between modes using the navigation bar menu.</p>
+</div>
+{% endblock %}
