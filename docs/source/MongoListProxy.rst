@@ -4,7 +4,7 @@ MongoListProxy
 Data Structure
 --------------
 
-A :class:`MongoListProxy` is suitable to manage a list of subdocuments
+A :class:`MongoListProxy` manages a **list** of subdocuments
 as shown in the following structure. See Proxy Overview for a list of all
 supported data structures. ::
 

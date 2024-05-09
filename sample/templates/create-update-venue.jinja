@@ -45,7 +45,7 @@
 {# New venue information can only be added #}
 {% else %}
     <div class="mb-3">
-        <a href="url_for( 'adminEventList' )" class="btn btn-outline-primary">Cancel</a>
+        <a href="{{ url_for( 'adminEventDetail', eventId=event.id() ) }}" class="btn btn-outline-primary">Cancel</a>
         {{ form.submitButton( class="btn btn-primary", value=title ) }}
     </div>
 {% endif %}

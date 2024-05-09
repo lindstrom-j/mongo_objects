@@ -4,7 +4,7 @@ MongoSingleProxy
 Data Structure
 --------------
 
-A :class:`MongoDictProxy` is suitable to manage a single subdocument
+A :class:`MongoDictProxy` manages a **single subdocument**
 as shown in the following structure. See Proxy Overview for a list of all
 supported data structures. ::
 
@@ -43,7 +43,7 @@ this is usually the parent document itself.
 
 The key is defined in the class as `container_name`. To keep the parallel with
 :class:`MongoDictProxy` and :class:`MongoListProxy`, :func:`get_proxy` accepts
-a `key` argument but it is ignored.
+a `key` argument when initializing a new proxy object but it is ignored.
 
 
 Subdocument IDs
@@ -51,7 +51,7 @@ Subdocument IDs
 
 Since the proxy key is an actual dictionary key in our document schema, it is not
 necessarily safe to share with users in a URL, for example. To protect against
-data schema leakage, the :func:`id` and :func:`proxy_id` functions always uses ``"0"``
+data schema leakage, the :func:`id` and :func:`proxy_id` functions always use ``"0"``
 when constructing subdocument IDs for :class:`MongoSingleProxy` instances.
 
 Since the *container_name* is provided in the class definition,

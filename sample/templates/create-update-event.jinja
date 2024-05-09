@@ -42,7 +42,7 @@
 {# New events can only be created #}
 {% else %}
     <div class="mb-3">
-        <a href="url_for( 'adminEventList' )" class="btn btn-outline-primary">Cancel</a>
+        <a href="{{ url_for( 'adminEventList' ) }}" class="btn btn-outline-primary">Cancel</a>
         {{ form.submitButton( class="btn btn-primary", value=title ) }}
     </div>
 {% endif %}

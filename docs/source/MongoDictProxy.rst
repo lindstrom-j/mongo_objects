@@ -5,7 +5,7 @@ MongoDictProxy
 Data Structure
 --------------
 
-A :class:`MongoDictProxy` is suitable to manage a dictionary of subdocuments
+A :class:`MongoDictProxy` manages a **dictionary** of subdocuments
 as shown in the following structure. See Proxy Overview for a list of all
 supported data structures. ::
 

@@ -44,7 +44,8 @@ class documentation for usage details.
 * :class:`MongoSingleProxy` references a **single** subdocument as its own class::
 
     {                     # parent document
-                          # no container
+                          # no container; the subdocument is a direct
+                          # member of the parent document
         { ... },          # proxy points to a single subdocument
     }
 
