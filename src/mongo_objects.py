@@ -958,9 +958,14 @@ class PolymorphicMongoDictProxy( PolymorphicMongoBaseProxy, AccessDictProxy ):
     def get_proxies( cls, parent ):
         result = []
         for key in parent.get( cls.container_name, {} ).keys():
-            proxy = cls.get_proxy( parent, key )
-            if isinstance( proxy, cls ):
+            try:
+                proxy = cls.get_proxy( parent, key )
                 result.append( proxy )
+            # get_proxy() will raise an exception if the proxy doesn't match
+            # the correct object type. We don't want those proxies anyway,
+            # so we silently skip them
+            except MongoObjectsPolymorphicMismatch:
+                pass
         return result
 
 
@@ -1155,9 +1160,14 @@ class PolymorphicMongoListProxy( PolymorphicMongoBaseProxy, AccessListProxy ):
     def get_proxies( cls, parent ):
         result = []
         for seq in range( len( parent.get( cls.container_name, [] ) ) ):
-            proxy = cls.get_proxy( parent, seq=seq )
-            if isinstance( proxy, cls ):
+            try:
+                proxy = cls.get_proxy( parent, seq=seq )
                 result.append( proxy )
+            # get_proxy() will raise an exception if the proxy doesn't match
+            # the correct object type. We don't want those proxies anyway,
+            # so we silently skip them
+            except MongoObjectsPolymorphicMismatch:
+                pass
         return result
 
 
