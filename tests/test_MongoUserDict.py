@@ -130,7 +130,7 @@ class TestVersioning:
         # There should only be one document at the current version (the default query)
         matches = 0
         for doc in sampleData:
-            filter = dict( doc )
+            filter = doc.copy()
             result = MMUD.find_one( filter )
             if result is not None:
                 assert result['_objver'] == MMUD.object_version
@@ -148,7 +148,7 @@ class TestVersioning:
         # There should only be one document at version 1
         matches = 0
         for doc in sampleData:
-            filter = dict( doc )
+            filter = doc.copy()
             result = MMUD.find_one( filter, object_version=1 )
             if result is not None:
                 assert result['_objver'] == 1
@@ -165,7 +165,7 @@ class TestVersioning:
 
         # Any document may be returned if object versioning is suppressed
         for doc in sampleData:
-            filter = dict( doc )
+            filter = doc.copy()
             assert MMUD.find_one( filter, object_version=False ) is not None
 
 
@@ -177,7 +177,7 @@ class TestVersioning:
 
         # None should be returned at a non-existent version for any document
         for doc in sampleData:
-            filter = dict( doc )
+            filter = doc.copy()
             assert MMUD.find_one( filter, object_version=10000000 ) is None
 
 
@@ -268,7 +268,7 @@ class TestSave:
         assert obj['_created'] == obj['_updated']
 
         # save the document again and confirm _updated changes but _created doesn't
-        original = dict( obj )
+        original = obj.copy()
         obj.save()
         assert obj['_created'] == original['_created']
         assert obj['_updated'] > original['_updated']
@@ -322,7 +322,7 @@ class TestSave:
         # save an empty document
         obj = MMUD()
         obj.save()
-        original = dict( obj )
+        original = obj.copy()
 
         # verify that the object was saved
         assert MMUD.collection().count_documents( {} ) == count + 1
@@ -455,7 +455,7 @@ class TestSave:
                 return False
 
         obj = LocalMMUD.find_one()
-        original = dict( obj )
+        original = obj.copy()
 
         # verify saving a document without authorization produces an exception
         with pytest.raises( mongo_objects.MongoObjectsAuthFailed ):
@@ -1199,36 +1199,15 @@ class TestBasics:
         assert result.readonly is True
 
 
-    def test_load_proxy_by_id( self, getPopulatedMMUDClass ):
+    def test_load_by_id_invalid( self, getPopulatedMMUDClass ):
         MMUD = getPopulatedMMUDClass
 
-        # load a random object
-        source = MMUD.find_one()
-
-        # load the same object with an empty proxy tree
-        result = MMUD.load_proxy_by_id( source.id() )
-
-        # verify the objects are the same
-        assert source == result
-
-        # verify the object is readonly
-        assert result.readonly is False
+        # verify that loading an invalid object returns None
+        assert MMUD.load_by_id( 'ZYX' ) is None
 
 
-    def test_load_proxy_by_id_readonly( self, getPopulatedMMUDClass ):
-        MMUD = getPopulatedMMUDClass
-
-        # load a random object
-        source = MMUD.find_one()
-
-        # load the same object with an empty proxy tree
-        result = MMUD.load_proxy_by_id( source.id(), readonly=True )
-
-        # verify the objects are the same
-        assert source == result
-
-        # verify the object is readonly
-        assert result.readonly is True
+# Test load_proxy_by_id() and load_proxy_by_local_id() in the
+# proxy tests as proxy classes are required
 
 
     def test_split_id( self, getMMUDClass ):

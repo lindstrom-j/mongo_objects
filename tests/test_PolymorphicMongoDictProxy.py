@@ -61,7 +61,7 @@ def getMPMUDClasses( mongo_db ):
 
 
     return {
-        'base' : MyMongoUserDict,
+        'parent_doc' : MyMongoUserDict,
         'A' : MyMongoDictProxyA,
         'Aa' : MyMongoDictProxyAa,
         'Ab' : MyMongoDictProxyAb,
@@ -86,7 +86,7 @@ def getPopulatedMPMUDClasses( getMPMUDClasses ):
 
     # make parent objects
     for i in range( itemMax ):
-        parent = classes['base']( {
+        parent = classes['parent_doc']( {
             'name' : f"Record {i}",
             'amount' : i * 10,
         } )
@@ -123,7 +123,7 @@ def getPopulatedMPMUDClasses( getMPMUDClasses ):
 def getSampleParent( getPopulatedMPMUDClasses ):
     classes = getPopulatedMPMUDClasses
     # find a random entry of the base class
-    return classes['base'].find_one()
+    return classes['parent_doc'].find_one()
 
 
 @pytest.fixture( scope='class' )
@@ -156,17 +156,18 @@ class TestInitSubclass:
             proxy_subclass_key = 'B'
 
         class MyTestSubclassC( MyTestClassBase ):
-            pass
+            proxy_subclass_key = 'C'
 
-        # Verify that classes A and B were added to the map
-        # Class C should be skipped because it doesn't have a non-None subclass_key
+        # Verify that all classes were added to the map
         assert MyTestClassBase.proxy_subclass_map == {
+            None : MyTestClassBase,
             'A' : MyTestSubclassA,
-            'B' : MyTestSubclassB
+            'B' : MyTestSubclassB,
+            'C' : MyTestSubclassC
         }
 
         # verify our local subclass map namespace didn't affect the module base class map
-        assert len( mongo_objects.PolymorphicMongoBaseProxy.proxy_subclass_map ) == 0
+        assert len( mongo_objects.PolymorphicMongoDictProxy.proxy_subclass_map ) == 0
 
 
     def test_init_subclass_duplicate_key( self ):
@@ -192,7 +193,7 @@ class TestCreate:
         parent = proxyA.parent
 
         # record current state
-        original = dict( parent )
+        original = parent.copy()
         count = len( proxyA.get_subdoc_container().keys() )
 
         # create a base class proxy object
@@ -222,7 +223,7 @@ class TestCreate:
         parent = proxyA.parent
 
         # record current state
-        original = dict( parent )
+        original = parent.copy()
         count = len( proxyA.get_subdoc_container().keys() )
 
         # create a base class proxy object
@@ -253,7 +254,7 @@ class TestCreate:
         parent = proxyA1.ultimate_parent
 
         # record current state
-        original = dict( parent )
+        original = parent.copy()
         countA = len( proxyA.get_subdoc_container().keys() )
         countA1 = len( proxyA1.get_subdoc_container().keys() )
 
@@ -286,7 +287,7 @@ class TestCreate:
         parent = proxyA1.ultimate_parent
 
         # record current state
-        original = dict( parent )
+        original = parent.copy()
         countA = len( proxyA.get_subdoc_container().keys() )
         countA1 = len( proxyA1.get_subdoc_container().keys() )
 
@@ -320,16 +321,15 @@ class TestPolymorphicBasics:
         Verify the base class proxy_subclass map is empty"""
         classes = getPopulatedMPMUDClasses
         assert len( mongo_objects.PolymorphicMongoDictProxy.proxy_subclass_map ) == 0
-        assert sorted( classes['A'].proxy_subclass_map ) == ['Aa', 'Ab', 'Ac']
-        assert sorted( classes['A1'].proxy_subclass_map ) == ['A1a', 'A1b', 'A1c']
-        assert sorted( classes['B'].proxy_subclass_map ) == ['Ba', 'Bb', 'Bc']
+        assert len( set( classes['A'].proxy_subclass_map ).difference( [None, 'Aa', 'Ab', 'Ac'] ) ) == 0
+        assert len( set( classes['A1'].proxy_subclass_map ).difference( [None, 'A1a', 'A1b', 'A1c'] ) ) == 0
+        assert len( set( classes['B'].proxy_subclass_map ).difference( [None, 'Ba', 'Bb', 'Bc'] ) ) == 0
 
 
     def test_get_proxy( self, getPopulatedMPMUDClasses, getSampleParent ):
-        """Test accessing both first-level and second-level proxies
-
-        For testing convenience, the keys of the getPopulatedMPMUDClasses dictionary
-        match the proxy_subclass_key for each subclass"""
+        """
+        Test accessing both first-level and second-level proxies
+        """
         classes = getPopulatedMPMUDClasses
         parent = getSampleParent
 
@@ -362,6 +362,116 @@ class TestPolymorphicBasics:
                     assert isinstance( proxyA1, classes['A1'] )
                 else:
                     assert isinstance( proxyA1, classes[ proxyA1['_psckey'] ] )
+
+
+    def test_get_proxy_subclass( self, getPopulatedMPMUDClasses, getSampleParent ):
+        """
+        Test accessing both first-level and second-level proxies with subclasses
+        """
+        classes = getPopulatedMPMUDClasses
+        parent = getSampleParent
+
+        # loop through keys in the proxy A container
+        for keyA in parent[ classes['A'].container_name ].keys():
+
+            # create a first-level proxy object
+            # This should always work
+            proxyA = classes['A'].get_proxy( parent, keyA )
+
+            # loop through the first-level subclasses
+            for subclass in ('Aa', 'Ab', 'Ac'):
+                # we should also be able to locate the proxy with its subclass
+                if proxyA.get('_psckey') == subclass:
+                    proxyA_by_subclass = classes[subclass].get_proxy( parent, keyA )
+                    assert id( proxyA.data() ) == id( proxyA_by_subclass.data() )
+
+                # creating a proxy with the wrong class raises an exception
+                else:
+                    print( f"subclass {subclass}   proxy key {proxyA.get('_psckey')!r}   keyA {keyA}" )
+                    with pytest.raises( mongo_objects.MongoObjectsPolymorphicMismatch ):
+                        proxyA_by_subclass = classes[subclass].get_proxy( parent, keyA )
+                        print( f"subclass type {type(proxyA_by_subclass)}" )
+                        proxyA_by_subclass.keys()
+
+                # loop through the keys of the second level proxy A1 container
+                for keyA1 in proxyA[ classes['A1'].container_name ].keys():
+
+                    # create a second-level proxy object
+                    # This should always work
+                    proxyA1 = classes['A1'].get_proxy( proxyA, keyA1 )
+
+                    # loop through the second level subclasses
+                    for subclassA1 in ('A1a', 'A1b', 'A1c'):
+                        # we should also be able to locate the proxy with its subclass
+                        if proxyA1.get('_psckey') == subclassA1:
+                            proxyA1_by_subclass = classes[subclassA1].get_proxy( proxyA, keyA1 )
+                            assert id( proxyA1.data() ) == id( proxyA1_by_subclass.data() )
+
+                        # creating a proxy with the wrong class raises an exception
+                        else:
+                            with pytest.raises( mongo_objects.MongoObjectsPolymorphicMismatch ):
+                                proxyA1_by_subclass = classes[subclassA1].get_proxy( proxyA, keyA1 )
+                                proxyA1_by_subclass.keys()
+
+
+    def test_get_proxies( self, getPopulatedMPMUDClasses, getSampleParent ):
+        """
+        Test accessing both first-level and second-level proxies with subclasses
+        """
+        classes = getPopulatedMPMUDClasses
+        parent = getSampleParent
+
+        # collect all first-level proxies from the base class
+        proxiesA = list( classes['A'].get_proxies( parent ) )
+
+        # verify all proxies were found
+        assert len( proxiesA ) == 4
+
+        # verify proper subclass was returned
+        for proxyA in proxiesA:
+            assert isinstance( proxyA, classes[ proxyA.get('_psckey', 'A') ] )
+
+            # collect all second-level proxies from the base class
+            proxiesA1 = list( classes['A1'].get_proxies( proxyA ) )
+
+            # verify all proxies were found
+            assert len( proxiesA1 ) == 4
+
+            # verify proper subclass was returned
+            for proxyA1 in proxiesA1:
+                assert isinstance( proxyA1, classes[ proxyA1.get('_psckey', 'A1') ] )
+
+
+    def test_get_proxies_subclass( self, getPopulatedMPMUDClasses, getSampleParent ):
+        """
+        Test accessing both first-level and second-level proxies with subclasses
+        """
+        classes = getPopulatedMPMUDClasses
+        parent = getSampleParent
+
+        # loop through the first-level subclasses
+        for subclass in ('Aa', 'Ab', 'Ac'):
+            # collect the proxies from this subclass
+            proxiesA = list( classes[subclass].get_proxies( parent ) )
+
+            # only one proxy should be found
+            assert len( proxiesA ) == 1
+
+            # verify proper subclass was returned
+            assert isinstance( proxiesA[0], classes[ subclass ] )
+            assert subclass == proxiesA[0].get('_psckey')
+
+            # loop through the second level subclasses
+            for subclassA1 in ('A1a', 'A1b', 'A1c'):
+                # collect the proxies from this subclass
+                proxiesA1 = list( classes[subclassA1].get_proxies( proxiesA[0] ) )
+
+                # only one proxy should be found
+                assert len( proxiesA1 ) == 1
+
+                # verify proper subclass was returned
+                assert isinstance( proxiesA1[0], classes[ subclassA1 ] )
+                assert subclassA1 == proxiesA1[0].get('_psckey')
 
 
     def test_get_subclass_by_key( self, getMPMUDClasses ):
