@@ -37,10 +37,16 @@ path = "docs/source/conf.py"
 packages = ["src/mongo_objects.py"]
 
 [tool.hatch.build.targets.sdist]
+artifacts = [
+  "docs/build/html",
+]
+exclude = [
+  ".gitignore",
+  "pyproject.toml",
+]
 include = [
   "src",
   "tests",
-  "docs/build/html",
   "sample",
 ]
 

@@ -7,38 +7,49 @@
 cd $(dirname $0)/..
 PROJECT_DIR=$(pwd)
 
+# allow a dry run flag to bypass otherwise fatal checks
+if [[ "$1" == '--dryrun' ]]; then
+    DRYRUN=1
+fi
+
 # activate the project virtual environment
 source ${PROJECT_DIR}/venv/bin/activate
 echo "activating virtual environment"
 
 # make sure there are no uncommitted changes
-if [[ $(git status --porcelain | wc -l ) -gt 0 ]]
-then
-echo "Project contains uncommitted changes; aborting build"
-git status
-exit -1
+if [[ $(git status --porcelain | wc -l ) -gt 0 ]]; then
+    echo "Project contains uncommitted changes; aborting build"
+    git status
+    if [[ "${DRYRUN}" != "1" ]]; then
+        exit -1
+    fi
 fi
 
 # verify that the current HEAD has a tag
 VERSION=$(git describe --abbrev=0 --exact-match)
-if [[ -z "${VERSION}" ]]
-then
-echo "No git tag found for HEAD"
-git log -n 1
-exit -1
+if [[ -z "${VERSION}" ]]; then
+    echo "No git tag found for HEAD"
+    echo "Add a tag with \"git tag -a vN.N.N\""
+    git log -n 1
+    if [[ "${DRYRUN}" != "1" ]]; then
+        exit -1
+    fi
 
-elif [[ "v${VERSION#v}" != "${VERSION}" ]]
-then
-echo "Tag ${VERSION} is not a version tag"
-exit -1
+elif [[ "v${VERSION#v}" != "${VERSION}" ]]; then
+    echo "Tag ${VERSION} is not a version tag"
+    echo "Tags should be in the format vN.N.N"
+    if [[ "${DRYRUN}" != "1" ]]; then
+        exit -1
+    fi
 fi
 
 # get the documentation version
 DOC_VERSION=$(PYTHONPATH="docs/source" python3 -c "import conf; print(conf.version)")
-if [[ "v${DOC_VERSION}" != "$VERSION" ]]
-then
-echo "Documentation version ${DOC_VERSION} does not match code version ${VERSION}"
-exit -1
+if [[ "v${DOC_VERSION}" != "$VERSION" ]]; then
+    echo "Documentation version ${DOC_VERSION} does not match code version ${VERSION}"
+    if [[ "${DRYRUN}" != "1" ]]; then
+        exit -1
+    fi
 fi
 
 # create version file
@@ -53,14 +64,18 @@ rm -rf ./dist 2> /dev/null
 # build project distribution
 if python3 -m build
 then
-echo
-echo "To upload these artifacts to PyPI, run the following command"
-echo "python3 -m twine upload dist/*"
-echo "or"
-echo "python3 -m twine upload --repository testpypi dist/*"
-
+    if [[ "${DRYRUN}" != "1" ]]; then
+        echo
+        echo "To upload these artifacts to PyPI, run the following command"
+        echo "python3 -m twine upload dist/*"
+        echo "or"
+        echo "python3 -m twine upload --repository testpypi dist/*"
+    else
+        echo
+        echo "Dry-run build complete"
+        echo "Artifacts are in the dist subdirectory"
+    fi
 else
-echo
-echo Build process exited with $?
-
+    echo
+    echo Build process exited with $?
 fi
