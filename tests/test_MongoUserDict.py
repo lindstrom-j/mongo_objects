@@ -1,7 +1,7 @@
 # test_MongoUserDict
 
 from bson import ObjectId
-from datetime import datetime
+import datetime
 import mongo_objects
 from pymongo.collection import Collection
 import pytest
@@ -73,7 +73,7 @@ def getVersionedPopulatedMMUDClass( getMMUDClass, sampleData ):
 
 
 class TestVersioning:
-    """Test how various function perform with object versioning"""
+    """Test how various methods perform with object versioning"""
 
     def test_find_all_current_version( self, getVersionedPopulatedMMUDClass ):
         MMUD = getVersionedPopulatedMMUDClass
@@ -258,13 +258,13 @@ class TestSave:
         # timestamp microseconds should be set to 0
         # time should be later than the start of this test (disregarding microseconds)
         assert '_created' in obj
-        assert isinstance( obj['_created'], datetime )
+        assert isinstance( obj['_created'], datetime.datetime )
         assert obj['_created'].microsecond % 1000 == 0
         assert obj['_created'].replace(microsecond=0) >= startTime.replace(microsecond=0)
 
         # verify that _updated was also added and matches _created
         assert '_updated' in obj
-        assert isinstance( obj['_updated'], datetime )
+        assert isinstance( obj['_updated'], datetime.datetime )
         assert obj['_created'] == obj['_updated']
 
         # save the document again and confirm _updated changes but _created doesn't
@@ -1226,9 +1226,9 @@ class TestBasics:
 
     def test_utcnow( self, getMMUDClass ):
         MMUD = getMMUDClass
-        startTime = datetime.utcnow()
+        startTime = datetime.datetime.now( datetime.UTC ).replace( tzinfo=None )
         mongoNow = MMUD.utcnow()
-        endTime = datetime.utcnow()
+        endTime = datetime.datetime.now( datetime.UTC ).replace( tzinfo=None )
 
         # verify that mongoNow has no microseconds
         assert mongoNow.microsecond % 1000 == 0

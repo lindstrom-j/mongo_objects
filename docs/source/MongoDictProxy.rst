@@ -6,7 +6,7 @@ Data Structure
 --------------
 
 A :class:`MongoDictProxy` manages a **dictionary** of subdocuments
-as shown in the following structure. See Proxy Overview for a list of all
+as shown in the following structure. See :doc:`proxy_overview` for a list of all
 supported data structures. ::
 
     {                           # parent document
@@ -53,8 +53,8 @@ proxy objects as well as any subdocument IDs already published as URLs.
 Validating Keys
 ~~~~~~~~~~~~~~~
 
-Proxy keys must already exist when creating objects by constructor or by :func:`get_proxy`.
-To create a new object and assign a new key, use :func:`create`. ::
+Proxy keys must already exist when creating objects by constructor or by :meth:`get_proxy`.
+To create a new object and assign a new key, use :meth:`create`. ::
 
     freds_ticket = Ticket( event, '1' )
     sallys_ticket = Ticket.get_proxy( event, '2' )
@@ -70,8 +70,14 @@ Class Reference
     :members:
     :inherited-members:
 
+Polymorphic Class Reference
+---------------------------
+
+Polymorphic proxies are supported by :class:`PolymorphicMongoDictProxy`. All the
+attributes and methods of :class:`MongoDictProxy` are supported with the following
+overrides.
+
 .. autoclass:: PolymorphicMongoDictProxy
     :special-members: __init__
     :members:
-    :inherited-members:
 

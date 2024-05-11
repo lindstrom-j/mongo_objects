@@ -4,16 +4,17 @@ Quickstart
 MongoDB Documents
 -----------------
 
-Subclass :doc:`MongoUserDict` and provide the class with two pieces of information,
+Get started by subclassing :doc:`MongoUserDict` and providing the class with
+two pieces of information,
 the pymongo object for your MongoDB database and the name of the collection.
 
-To illustrate we'll use snippets of the event management application
-from the sample code.::
+To illustrate we'll use snippets from the event management application
+in the sample code. ::
 
     import mongo_objects
 
     class Event( mongo_objects.MongoUserDict ):
-        db = ...          # provide your MongoDB database object here
+        db = ...          # provide your pymongo database object here
         collection_name = 'events'
 
 
@@ -125,6 +126,6 @@ Common use patterns::
         )
 
 
-You can read more in the :doc:`MongoDictProxy` documentation. Lists
+You can read more in the :doc:`proxy_overview` and :doc:`MongoDictProxy` documentation. Lists
 can also be used as subdocument containers with :doc:`MongoListProxy`.
 Single dictionary proxies are managed with :doc:`MongoSingleProxy`.

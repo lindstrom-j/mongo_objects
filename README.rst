@@ -68,7 +68,7 @@ MongoUserDict
 
     class Event( mongo_objects.MongoUserDict ):
 
-        db = ...     # provide your MongoDB database object here
+        db = ...     # provide your pymongo database object here
         collection_name = 'events'
 
         def isFuture( self ):

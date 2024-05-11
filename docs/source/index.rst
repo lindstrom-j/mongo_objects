@@ -11,7 +11,7 @@ Documents are returned as user-defined UserDict subclasses, seamlessly linking u
 with MongoDB data.
 
 Subdocuments are accessed through user-defined, dictionary-like subclasses that proxy
-access back to the original parent document.
+data from the original parent document.
 
 
 Installation

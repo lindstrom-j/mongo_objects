@@ -49,6 +49,7 @@ app.config['SECRET_KEY'] = secrets.token_urlsafe(32)
 
 class Benefit( mongo_objects.PolymorphicMongoListProxy ):
     container_name = 'benefits'
+    proxy_subclass_map = {}
 
 class Feature( Benefit ):
     proxy_subclass_key = 'ft'
@@ -593,7 +594,7 @@ def adminUpdateEvent( eventId ):
 
             # Update event document with new data
             ed = form.eventDate.data
-            # update() is just the plain vanilla dictionary function
+            # update() is just the plain vanilla dictionary method
             event.update( {
                 'name' : form.name.data,
                 'description' : form.description.data,

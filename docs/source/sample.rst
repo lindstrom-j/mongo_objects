@@ -1,7 +1,9 @@
 Sample Application
 =============================
 
-The :mod:`mongo_objects` source code includes a sample Flask
+The :mod:`mongo_objects`
+`source code <https://github.com/lindstrom-j/mongo_objects>`_
+as well as the source distribution package include a sample Flask
 application that demonstrates many common usage patterns.
 
 Starting The Sample Application
@@ -88,19 +90,19 @@ mode to create your first event as follows:
 
 .. image:: _static/create-event.png
     :align: center
-    :width: 60%
+    :width: 80%
 
 
-Now use Compass to view the contents of the explore the contents of the ``events`` collection.
+Now use Compass to view the contents of the ``events`` collection.
 There should be one document similar to the following::
 
     {
-    "_id": "663c54bbeba88ab288f3bd3d",
-    "name": "End Of The Century Party",
-    "description": "This will be even more fun than last time!",
-    "eventDate": "2099-12-31T00:00:00.000Z",
-    "_updated": "2024-05-09T04:44:43.030Z",
-    "_created": "2024-05-09T04:44:43.030Z"
+        "_id": "663c54bbeba88ab288f3bd3d",
+        "name": "End Of The Century Party",
+        "description": "This will be even more fun than last time!",
+        "eventDate": "2099-12-31T00:00:00.000Z",
+        "_updated": "2024-05-09T04:44:43.030Z",
+        "_created": "2024-05-09T04:44:43.030Z"
     }
 
 This is a typical MongoDB document dictionary, although you'll notice
@@ -110,14 +112,14 @@ timestamps to the document when it was saved.
 If you look at the event details page in the sample app, you'll see
 a URL similar to ``http://127.0.0.1:5000/admin-event-detail/663c54bbeba88ab288f3bd3d``.
 The unique number in the URL is just the MongoDB ObjectId.
-:class:`MongoUserDict` provides the
-:func:`id` and :func:`load_by_id` methods to make it easy to locate
+The :meth:`MongoUserDict.id` and :meth:`MongoUserDict.load_by_id`
+methods to make it easy to locate
 documents by their ObjectId.
 
 Because events are actually represented using a :class:`MongoUserDict` subclass
 named :class:`Event`, we have added our own methods to assist with the event
-workflow. :meth:`displayDate` provides consistent date formatting while
-:meth:`isSoldOut` provides a single calculation for ticket availability.
+workflow. :meth:`.displayDate` provides consistent date formatting while
+:meth:`.isSoldOut` provides a single calculation for ticket availability.
 
 By passing an :class:`Event` object to another function or even to a Jinja
 template, not only the event data but also all these methods are available
@@ -135,7 +137,7 @@ Use the admin mode to add venue information to the event as follows:
 
 .. image:: _static/add-venue.png
     :align: center
-    :width: 60%
+    :width: 80%
 
 Check the MongoDB document with Compass::
 
@@ -165,12 +167,12 @@ the :class:`Venue` class instead of cluttering up :class:`Event`.
 
 Since the data for each proxy object only exists in the parent
 MongoDB document, the parent document must be loaded before the
-proxy is available. We've added a helpful :meth:`getVenue` method
+proxy is available. We've included a helpful :meth:`Event.getVenue` method
 to return the :class:`Venue` proxy object from a :class:`Event`
 already loaded into memory.
 
 Each proxy object has a unique ID that includes the parent document
-ObjectId. There's a :meth:`loadVenueById` class method that
+ObjectId. There's an :meth:`Event.loadVenueById` class method that
 parses the venue ID, loads the correct :class:`Event` document and
 returns the appropriate :class:`Venue` proxy object.
 
@@ -198,19 +200,19 @@ VIP tickets:
 
 .. image:: _static/add-ticket-type-1.png
     :align: center
-    :width: 60%
+    :width: 80%
 
 General admission:
 
 .. image:: _static/add-ticket-type-2.png
     :align: center
-    :width: 60%
+    :width: 80%
 
 Discounted student tickets:
 
 .. image:: _static/add-ticket-type-3.png
     :align: center
-    :width: 60%
+    :width: 80%
 
 Use MongoDB Compass to check the document content::
 
@@ -270,14 +272,14 @@ Each proxy object has a unique ID consisting of the document ObjectId plus the
 proxy subdocument key. ``g`` is used as a URL-safe, non-hexidecimal separator.
 
 Each proxy object provides a :meth:`id` method that constructs the unique ID.
-:class:`MongoUserDict` provides :meth:`load_proxy_by_id` to parse a proxy object
+:class:`MongoUserDict` provides :meth:`.load_proxy_by_id` to parse a proxy object
 ID, load the correct parent document and return the appropriate subdocument
-object. In fact, our :class:`Event` class method :meth:`loadTicketTypeById`
-just calls :meth:`load_proxy_by_id` to locate and return :class:`TicketType` objects.
+object. In fact, our :class:`Event` class method :meth:`.loadTicketTypeById`
+just calls :meth:`.load_proxy_by_id` to locate and return :class:`TicketType` objects.
 
-Once an :class:`Event` object is loaded, :meth:`getTicketTypes` has been
-included to call :meth:`get_proxies` and return a list
-of all :class:`TicketType` proxies. The method :meth:`getTicketType` can be called
+Once an :class:`Event` object is loaded, :meth:`.getTicketTypes` has been
+included to call :meth:`MongoUserDict.get_proxies` and return a list
+of all :class:`TicketType` proxies. The method :meth:`.getTicketType` can be called
 to create a proxy for a single ticket type based on the key.
 
 
@@ -296,7 +298,7 @@ to our end-of-the-century party.
 
 .. image:: _static/purchase-ticket.png
     :align: center
-    :width: 60%
+    :width: 80%
 
 Let's look at the actual data with Compass::
 
@@ -358,7 +360,7 @@ page, you'll see that Fred's ticket number is just the proxy ID.
 
 .. image:: _static/vip-ticket-detail-1.png
     :align: center
-    :width: 60%
+    :width: 80%
 
 The key is also used to track the subdocument dictionary within the
 list. If the list is modified, :class:`MongoListProxy` will use the
@@ -385,6 +387,7 @@ This data structure is defined as follows::
 
     class Benefit( mongo_objects.PolymorphicMongoListProxy ):
         container_name = 'benefits'
+        proxy_subclass_map = {}
 
     class Feature( Benefit ):
         proxy_subclass_key = 'ft'
@@ -395,21 +398,21 @@ This data structure is defined as follows::
 The :class:`Benefit` base class defines the *container_name* that the
 two subclasses will share. The :class:`Feature` and :class:`Gift`
 subclasses each define a unique *proxy_subclass_key* value that
-class:`PolymorphicMongoDictProxy` uses to decide which class to
+:class:`PolymorphicMongoDictProxy` uses to decide which class to
 instantiate.
 
 Use admin mode to add a feature to the VIP ticket type:
 
 .. image:: _static/add-feature.png
     :align: center
-    :width: 60%
+    :width: 80%
 
 
 Now add a gift to the VIP ticket type:
 
 .. image:: _static/add-gift.png
     :align: center
-    :width: 60%
+    :width: 80%
 
 
 Let's look at the data::
@@ -477,9 +480,9 @@ list containing two subdocuments of its own. :mod:`mongo_objects` proxy objects
 support nesting as many levels as you like and in any order. In this case,
 a :class:`MongoListProxy` is nested within a :class:`MongoDictProxy`.
 
-The :class:`MongoUserDict` method :meth:`id` builds IDs for nested proxies and the
-class method :meth:`load_proxy_by_id` loads nested proxies. This functionality
-is used to implement :meth:`Event.loadBenefitById`.
+The method :meth:`MongoUserDict.id` builds IDs for nested proxies and the
+class method :meth:`MongoUserDict.load_proxy_by_id` loads nested proxies.
+This functionality is used to implement :meth:`Event.loadBenefitById`.
 
 If you update the Front Row Seat feature added above, you'll see an example
 of a nested proxy ID in the URL, for example,
@@ -493,7 +496,7 @@ There's an important distinction to observe when calling :meth:`get_proxies`
 for polymorphic proxies:
 
     * If you call the base class, you will get all proxies in the container,
-      each with the correct class. In the example above``Benefit.get_proxies()``
+      each with the correct class. In the example above ``Benefit.get_proxies()``
       will return a list with two objects, one :class:`Feature` and one
       :class:`Gift`.
     * If you call a subclass, you will only get proxies of that type. For example,
@@ -509,15 +512,14 @@ interplay between :class:`MongoUserDict` parent documents and the three
 subdocument proxy types.
 
 Observe some commong coding patterns. For example, since proxy objects can
-only exist once the parent document is loaded, proxy loading functions like
-:meth:`loadBenefitById`, :meth:`loadTicketTypeById` and
-:meth:`loadVenueById` are usually class methods of the parent document class
+only exist after the parent document is loaded, proxy loading methods like
+:meth:`.loadBenefitById`, :meth:`.loadTicketTypeById` and
+:meth:`.loadVenueById` are usually class methods of the parent document class
 :class:`Event`.
 
-Likewise, proxy creation method like :meth:`getTicket`, :meth:`getTickets`,
-:meth:`getTicketsByType`, :meth:`getTicketType`, :meth:`getTicketTypes` and
-:meth:`getVenue` are also placed in the parent document class.
+Likewise, proxy creation method like :meth:`.getTicket`, :meth:`.getTickets`,
+:meth:`.getTicketsByType`, :meth:`.getTicketType`, :meth:`.getTicketTypes` and
+:meth:`.getVenue` are placed in the parent document class as well.
 
 Refer to the rest of the documentation for information on other features like
-:class:`PolymorphicMongoUserDict` or advice on overriding the default
-unique key generation logic.
+:class:`PolymorphicMongoUserDict` polymorphic documents.

@@ -10,7 +10,7 @@ authors = [
   { name="Jonathan Lindstrom", email="lindstrom.j@headwaters.com.sg" },
 ]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
@@ -36,7 +36,13 @@ path = "docs/source/conf.py"
 [tool.hatch.build.targets.wheel]
 packages = ["src/mongo_objects.py"]
 
-[tool.pytest.ini_options]
-filterwarnings = [
-    'ignore:datetime.datetime.utcnow\(\) is deprecated and scheduled for removal in a future version.:DeprecationWarning',
+[tool.hatch.build.targets.sdist]
+include = [
+  "src",
+  "tests",
+  "docs/build/html",
+  "sample",
 ]
+
+[tool.hatch.build.targets.sdist.sources]
+"docs/build/html" = "docs"

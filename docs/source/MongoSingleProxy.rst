@@ -5,7 +5,7 @@ Data Structure
 --------------
 
 A :class:`MongoDictProxy` manages a **single subdocument**
-as shown in the following structure. See Proxy Overview for a list of all
+as shown in the following structure. See :doc:`proxy_overview` for a list of all
 supported data structures. ::
 
     {                           # parent document
@@ -42,7 +42,7 @@ the subdocument in the parent dictionary. Since there is no separate container,
 this is usually the parent document itself.
 
 The key is defined in the class as `container_name`. To keep the parallel with
-:class:`MongoDictProxy` and :class:`MongoListProxy`, :func:`get_proxy` accepts
+:class:`MongoDictProxy` and :class:`MongoListProxy`, :meth:`MongoSingleProxy.get_proxy` accepts
 a `key` argument when initializing a new proxy object but it is ignored.
 
 
@@ -51,11 +51,12 @@ Subdocument IDs
 
 Since the proxy key is an actual dictionary key in our document schema, it is not
 necessarily safe to share with users in a URL, for example. To protect against
-data schema leakage, the :func:`id` and :func:`proxy_id` functions always use ``"0"``
+data schema leakage, the :meth:`id` and
+:meth:`proxy_id` methods always use ``"0"``
 when constructing subdocument IDs for :class:`MongoSingleProxy` instances.
 
 Since the *container_name* is provided in the class definition,
-:func:`load_proxy_by_id` can create these proxies without problem. ::
+:meth:`.load_proxy_by_id` can create these proxies without problem. ::
 
     class Event( mongo_objects.MongoUserDict ):
 
@@ -64,11 +65,12 @@ Since the *container_name* is provided in the class definition,
             return cls.load_proxy_by_id( venueId, Venue )
 
 
-:func:`get_proxies`
-~~~~~~~~~~~~~~~~~~~
+:meth:`get_proxies`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Since :class:`MongoSingleProxy` by definition is a single subdocument, the
-:func:`get_proxies` function is not supported and raises an :exc:`Exception`.
+:meth:`get_proxies` method is not supported
+and raises an :exc:`Exception`.
 
 
 Class Reference
@@ -80,7 +82,13 @@ Class Reference
     :members:
     :inherited-members:
 
+Polymorphic Class Reference
+---------------------------
+
+Polymorphic proxies are supported by :class:`PolymorphicMongoSingleProxy`. All the
+attributes and methods of :class:`MongoSingleProxy` are supported with the following
+overrides.
+
 .. autoclass:: PolymorphicMongoSingleProxy
     :special-members: __init__
     :members:
-    :inherited-members:

@@ -522,7 +522,72 @@ class TestPolymorphicBasics:
 
     def test_get_subclass_by_key( self, getMPMUDClasses ):
         classes = getMPMUDClasses
+
+        # Check the map from the base class
         assert classes['A'].get_subclass_by_key( 'Aa' ) == classes['Aa']
+        assert classes['A'].get_subclass_by_key( 'Ab' ) == classes['Ab']
+        assert classes['A'].get_subclass_by_key( 'Ac' ) == classes['Ac']
+
+        # In the default classes, the base doc class has None
+        # as a subclass key and so is the default for all unknown
+        # subclass keys
+        assert classes['A'].get_subclass_by_key( 'A' ) == classes['A']
+        assert classes['A'].get_subclass_by_key( 'Ad' ) == classes['A']
+
+
+    def test_get_subclass_by_key_from_subclass( self, getMPMUDClasses ):
+        classes = getMPMUDClasses
+
+        # Check the map from the base class
+        assert classes['Aa'].get_subclass_by_key( 'Aa' ) == classes['Aa']
+        assert classes['Aa'].get_subclass_by_key( 'Ab' ) == classes['Ab']
+        assert classes['Aa'].get_subclass_by_key( 'Ac' ) == classes['Ac']
+
+        # In the default classes, the base doc class has None
+        # as a subclass key and so is the default for all unknown
+        # subclass keys
+        assert classes['Aa'].get_subclass_by_key( 'A' ) == classes['A']
+        assert classes['Aa'].get_subclass_by_key( 'Ad' ) == classes['A']
+
+
+    def test_get_subclass_by_key_no_default( self ):
+        '''Test get_subclass_by_key with a different class structure
+        where the base class has its own proxy_subclass_key and thus
+        there is no default class.'''
+        class LocalMongoListProxyA( mongo_objects.PolymorphicMongoListProxy ):
+            container_name = 'proxyA'
+            proxy_subclass_map = {}
+            proxy_subclass_key = 'A'
+
+        class LocalMongoListProxyAa( LocalMongoListProxyA ):
+            proxy_subclass_key = 'Aa'
+
+        class LocalMongoListProxyAb( LocalMongoListProxyA ):
+            proxy_subclass_key = 'Ab'
+
+        class LocalMongoListProxyAc( LocalMongoListProxyA ):
+            proxy_subclass_key = 'Ac'
+
+        assert LocalMongoListProxyA.get_subclass_by_key( 'A' ) == LocalMongoListProxyA
+        assert LocalMongoListProxyA.get_subclass_by_key( 'Aa' ) == LocalMongoListProxyAa
+        assert LocalMongoListProxyA.get_subclass_by_key( 'Ab' ) == LocalMongoListProxyAb
+        assert LocalMongoListProxyA.get_subclass_by_key( 'Ac' ) == LocalMongoListProxyAc
+
+        # There is no default class (no class with a None subclass_key)
+        # so unknown subclass keys will raise an exception
+        with pytest.raises( mongo_objects.MongoObjectsPolymorphicMismatch ):
+            LocalMongoListProxyA.get_subclass_by_key( 'Ad' )
+
+        # Also check the return from a subclass
+        assert LocalMongoListProxyAa.get_subclass_by_key( 'A' ) == LocalMongoListProxyA
+        assert LocalMongoListProxyAa.get_subclass_by_key( 'Aa' ) == LocalMongoListProxyAa
+        assert LocalMongoListProxyAa.get_subclass_by_key( 'Ab' ) == LocalMongoListProxyAb
+        assert LocalMongoListProxyAa.get_subclass_by_key( 'Ac' ) == LocalMongoListProxyAc
+
+        # There is no default class (no class with a None subclass_key)
+        # so unknown subclass keys will raise an exception
+        with pytest.raises( mongo_objects.MongoObjectsPolymorphicMismatch ):
+            LocalMongoListProxyAa.get_subclass_by_key( 'Ad' )
 
 
     def test_get_subclass_from_doc( self, getMPMUDClasses ):
