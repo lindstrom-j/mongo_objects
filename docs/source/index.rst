@@ -17,11 +17,12 @@ data from the original parent document.
 Installation
 ------------
 
-Install from PyPI. We recommend installing into the virtual environment
+Install from `PyPI <https://pypi.org/project/mongo-objects>`_. We recommend installing into the virtual environment
 for your Python project.::
 
     pip install mongo_objects
 
+The source code is also available `GitHub <https://github.com/lindstrom-j/mongo_objects>`_.
 
 Getting Started
 ---------------
