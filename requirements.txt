@@ -34,7 +34,6 @@ pymongo==4.7.2
 pyproject_hooks==1.1.0
 PySocks==1.7.1
 pyspellchecker==0.8.1
-pytest==8.2.0
 readme_renderer==43.0
 requests==2.31.0
 requests-toolbelt==1.0.0

@@ -1226,9 +1226,9 @@ class TestBasics:
 
     def test_utcnow( self, getMMUDClass ):
         MMUD = getMMUDClass
-        startTime = datetime.datetime.now( datetime.UTC ).replace( tzinfo=None )
+        startTime = datetime.datetime.now( datetime.timezone.utc ).replace( tzinfo=None )
         mongoNow = MMUD.utcnow()
-        endTime = datetime.datetime.now( datetime.UTC ).replace( tzinfo=None )
+        endTime = datetime.datetime.now( datetime.timezone.utc ).replace( tzinfo=None )
 
         # verify that mongoNow has no microseconds
         assert mongoNow.microsecond % 1000 == 0

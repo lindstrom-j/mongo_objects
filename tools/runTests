@@ -1,12 +1,29 @@
 #!/bin/bash
+#
+# Run tests on one or more Python versions
+#
+# USAGE: runTests [--version Python-version] [pytest arguments]
 
 # assume this script is in the "tools" subdirectory; change to project directory
 cd $(dirname $0)/..
 PROJECT_DIR=$(pwd)
 
-# activate the project virtual environment
-source ${PROJECT_DIR}/venv/bin/activate
-echo "activating virtual environment"
+# Determine Python version to test
+if [[ "${1}" == "--version" ]]; then
+    if [[ "${2}" == "ALL" ]]; then
+        PYVERSIONS="3.12 3.11 3.10 3.9 3.8"
+    else
+        if [[ -z $(which "python${2}") ]]; then
+            echo "Python version ${2} not found"
+            exit 1
+        fi
+        PYVERSIONS=$2
+    fi
+    shift
+    shift
+else
+    PYVERSIONS=3.12
+fi
 
 # create MongoDB directory if it doesn't exist
 if [ ! -d db ]; then
@@ -21,11 +38,33 @@ if ! pgrep -q mongod; then
   echo Started MongoDB PID $STARTED_MONGO_PID
 fi
 
+# loop through the Python version
+for PYVERSION in ${PYVERSIONS}; do
+
+# set test virtual environment directory
+VENVDIR=${PROJECT_DIR}/venv-test-${PYVERSION}
+
+# create the environment if it doesn't exist
+if [[ ! -d ${VENVDIR} ]]; then
+    python${PYVERSION} -m venv ${VENVDIR}
+    source ${VENVDIR}/bin/activate
+    pip install -r ${PROJECT_DIR}/tests/requirements.txt
+    echo "created ${PYVERSION} virtual environment"
+
+# activate the project virtual environment
+else
+    source ${VENVDIR}/bin/activate
+    echo "activated ${PYVERSION} virtual environment"
+fi
+
 # set up environment
 export PYTHONPATH=${PROJECT_DIR}/src:${PROJECT_DIR}/tests:$PYTHONPATH
 
 # run the tests
 python -m pytest $*
+
+# end loop
+done
 
 # shut down MongoDB if we started it
 if [ -n "$STARTED_MONGO_PID" ]; then

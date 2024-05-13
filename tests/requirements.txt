@@ -1,0 +1,5 @@
+pymongo
+PySocks
+pytest
+setuptools
+wheel

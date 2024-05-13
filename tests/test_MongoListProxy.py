@@ -976,6 +976,15 @@ class TestBasics:
             result.keys()
 
 
+    def test_load_proxy_by_id_list_mismatch( self, getPopulatedMMUDClasses, getSampleProxyA ):
+        classes = getPopulatedMMUDClasses
+        proxyA = getSampleProxyA
+
+        # loading a proxy with more classes than IDs raises a ValueError
+        with pytest.raises( ValueError ):
+            classes['parent_doc'].load_proxy_by_id( proxyA.id(), classes['A'], classes['B'] )
+
+
     def test_load_proxy_by_id_A1( self, getPopulatedMMUDClasses, getSampleProxyA1 ):
         classes = getPopulatedMMUDClasses
         proxyA1 = getSampleProxyA1
@@ -990,7 +999,7 @@ class TestBasics:
         assert result.ultimate_parent.readonly is False
 
 
-    def test_load_proxy_by_id_readonly_A1( self, getPopulatedMMUDClasses, getSampleProxyA1 ):
+    def test_load_proxy_by_id_A1_readonly( self, getPopulatedMMUDClasses, getSampleProxyA1 ):
         classes = getPopulatedMMUDClasses
         proxyA1 = getSampleProxyA1
 
@@ -1004,6 +1013,15 @@ class TestBasics:
         assert result.ultimate_parent.readonly is True
 
 
+    def test_load_proxy_by_id_A1_list_mismatch( self, getPopulatedMMUDClasses, getSampleProxyA1 ):
+        classes = getPopulatedMMUDClasses
+        proxyA1 = getSampleProxyA1
+
+        # loading a proxy with more IDs than classes raises a ValueError
+        with pytest.raises( ValueError ):
+            classes['parent_doc'].load_proxy_by_id( proxyA1.id(), classes['A'] )
+
+
     def test_load_proxy_by_local_id( self, getPopulatedMMUDClasses, getSampleProxyA ):
         classes = getPopulatedMMUDClasses
         proxyA = getSampleProxyA
@@ -1015,6 +1033,15 @@ class TestBasics:
         assert result.data() == proxyA.data()
 
 
+    def test_load_proxy_by_local_id_list_mismatch( self, getPopulatedMMUDClasses, getSampleProxyA ):
+        classes = getPopulatedMMUDClasses
+        proxyA = getSampleProxyA
+
+        # loading a proxy with more classes than IDs raises a ValueError
+        with pytest.raises( ValueError ):
+            proxyA.ultimate_parent.load_proxy_by_local_id( proxyA.proxy_id(), classes['A'], classes['B'] )
+
+
     def test_load_proxy_by_local_id_A1( self, getPopulatedMMUDClasses, getSampleProxyA1 ):
         classes = getPopulatedMMUDClasses
         proxyA1 = getSampleProxyA1
@@ -1024,6 +1051,17 @@ class TestBasics:
 
         # verify the objects are the same
         assert result.data() == proxyA1.data()
+
+
+
+    def test_load_proxy_by_local_id_A1_list_mismatch( self, getPopulatedMMUDClasses, getSampleProxyA1 ):
+        classes = getPopulatedMMUDClasses
+        proxyA1 = getSampleProxyA1
+
+        # loading a proxy with more IDs than classes raises a ValueError
+        with pytest.raises( ValueError ):
+            result = proxyA1.ultimate_parent.load_proxy_by_local_id( proxyA1.proxy_id(), classes['A'] )
+            result.keys()
 
 
     def test_id_A1( self, getSampleProxyA1 ):
