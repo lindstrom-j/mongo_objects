@@ -405,7 +405,10 @@ class MongoUserDict( UserDict ):
         # assuming a parent object was loaded, loop through
         # each level of proxy using the previous object as the parent
         if obj is not None:
-            for (proxy_subclass, id) in zip( args, ids, strict=True ):
+            # COMPATABILITY: 3.10+ use zip( args, ids, strict=True )
+            if len( args ) != len( ids ):
+                raise ValueError
+            for (proxy_subclass, id) in zip( args, ids ):
                 try:
                     obj = proxy_subclass.get_proxy( obj, id )
                 except Exception as e:
@@ -435,10 +438,16 @@ class MongoUserDict( UserDict ):
         # split the subdocument_id into its components
         ids = self.split_id( id )
 
+        # COMPATABILITY: 3.10+ use zip( args, ids, strict=True )
+        print( f"len ids{len(ids)}: {ids!r}" )
+        print( f"len args {len(args)} : {args!r}" )
+        if len( args ) != len( ids ):
+            raise ValueError
+
         # loop through each level of proxy using the previous object
         # as the parent
         obj = self
-        for (proxy_subclass, id) in zip( args, ids, strict=True ):
+        for (proxy_subclass, id) in zip( args, ids ):
             try:
                 obj = proxy_subclass.get_proxy( obj, id )
             except Exception as e:
@@ -563,7 +572,7 @@ class MongoUserDict( UserDict ):
         :returns: The current time with microseconds set to 0.
         :rtype: naive :class:`datetime.datetime`
         """
-        now = datetime.datetime.now( datetime.UTC )
+        now = datetime.datetime.now( datetime.timezone.utc )
         return now.replace( microsecond=(now.microsecond // 1000) * 1000, tzinfo=None )
 
 
