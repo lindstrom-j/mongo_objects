@@ -15,8 +15,8 @@ sys.path.append(os.path.abspath('../../src') )
 project = 'mongo_objects'
 copyright = '2024, Jonathan Lindstrom'
 author = 'Jonathan Lindstrom'
-release = '1.2.0'
-version = '1.2.0'
+release = '1.2.1'
+version = '1.2.1'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
