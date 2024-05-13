@@ -34,7 +34,7 @@ Issues = "https://github.com/lindstrom-j/mongo_objects/issues"
 path = "docs/source/conf.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/mongo_objects.py"]
+packages = ["src/mongo_objects"]
 
 [tool.hatch.build.targets.sdist]
 artifacts = [
