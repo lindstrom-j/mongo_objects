@@ -369,9 +369,10 @@ class TestSave:
         # and to have a valid _updated timestamp
         obj = MMUD( sampleData[1] )
         obj['_id'] = ObjectId()
+        obj['_updated'] = startTime
 
         # saving it should raise an exception as no existing object can be found
-        # in this case _updated starts as None but it could be anything
+        # with this timestamp
         original_updated = obj.get('_updated')
         with pytest.raises( Exception ):
             obj.save()
@@ -384,6 +385,37 @@ class TestSave:
 
         # force saving will work
         obj.save( force=True )
+
+        # verify that something was saved
+        assert MMUD.collection().count_documents( {} ) == count+1
+
+        # verify that timestamp has been updated
+        assert obj['_updated'] >= startTime
+
+        # find document directly from database driver
+        doc = MMUD.collection().find_one( { '_id' : obj['_id'] } )
+
+        # verify database object _updated timestamp
+        assert doc['_updated'] == obj['_updated']
+
+
+    def test_save_force_backfill( self, getMMUDClass, sampleData ):
+        MMUD = getMMUDClass
+
+        # count documents
+        count =  MMUD.collection().count_documents( {} )
+
+        # record the current time
+        startTime = MMUD.utcnow()
+
+        # manually assign an ObjectId
+        # any object with an _id is assumed to have been saved already
+        # and to have a valid _updated timestamp
+        obj = MMUD( sampleData[1] )
+        obj['_id'] = ObjectId()
+
+        # saving will work but is treated as a force save
+        obj.save()
 
         # verify that something was saved
         assert MMUD.collection().count_documents( {} ) == count+1

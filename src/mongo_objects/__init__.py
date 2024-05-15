@@ -530,7 +530,8 @@ class MongoUserDict( UserDict ):
                 self['_id'] = result.inserted_id
 
             # Force-save a document regardless of timestamp
-            elif force:
+            # An object without an _updated timestamp is considered a force save
+            elif force or '_updated' not in original:
                 result = self.collection().replace_one( { '_id' : self['_id'] }, self.data, upsert=True )
 
             # Otherwise, only update a document with the same updated timestamp as our in-memory object
