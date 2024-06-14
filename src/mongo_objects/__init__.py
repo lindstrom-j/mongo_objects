@@ -75,7 +75,7 @@ class MongoUserDict( UserDict ):
     object_version = None
 
     #: The character sequence used to separate the document ID from proxy subdocument keys.
-    #: This may be overriden but it is the user's responsibility to guarantee that this
+    #: This may be overridden but it is the user's responsibility to guarantee that this
     #: sequence will never appear in any ID or subdoc key.
     #: Since the default IDs and subdoc keys are hex, ``g`` is a safe, default separator
     subdoc_key_sep = 'g'
@@ -86,7 +86,7 @@ class MongoUserDict( UserDict ):
         Initialize the custom UserDict object
         flagging readonly objects appropriately.
 
-        :raises MongoObjectsAuthFailed: if `authorize_init()` has been overriden
+        :raises MongoObjectsAuthFailed: if `authorize_init()` has been overridden
           and does not return a truthy value
         """
 
@@ -201,13 +201,43 @@ class MongoUserDict( UserDict ):
         return cls.database.get_collection( cls.collection_name )
 
 
+    @classmethod
+    def count_documents( cls, filter={}, object_version=None, **kwargs ):
+        """Count the documents matching the filter. Arguments are passed through to
+        :meth:`pymongo.count_documents`
+
+        :param filter: Updated with *cls.object_version* as appropriate
+        :type filter: dict
+        :param object_version: Only if *cls.object_version* is not ``None``, implement object schema versioning.
+
+          1) If ``None``, update the filter to only return documents with the current *cls.object_version* value
+          2) If ``False``, don't filter objects by *cls.object_version*
+          3) For any other value, update the filter to only return documents with the given *object_version*
+
+        :type object_version: ``None``, ``False``, any scalar value
+        :returns: the count of matching documents
+        :raises MongoObjectsAuthFailed: if `authorize_pre_read()` has been overridden
+          and does not return a truthy value
+        """
+
+        # Authorize reading at all
+        if not cls.authorize_pre_read():
+            raise MongoObjectsAuthFailed
+
+        # automatically filter by object version if requested
+        if cls.object_version is not None:
+            filter = cls.add_object_version_filter( filter, object_version )
+
+        return cls.collection().count_documents( filter, **kwargs )
+
+
     def delete( self ):
         """Delete the current object.
         Remove the id so :meth:`.save()` will know this is a new object if we try to re-save.
         Other data values are still available in this dictionary
         even after the data is deleted from the database.
 
-        :raises MongoObjectsAuthFailed: if `authorize_delete()` has been overriden
+        :raises MongoObjectsAuthFailed: if `authorize_delete()` has been overridden
           and does not return a truthy value
         """
 
@@ -244,7 +274,7 @@ class MongoUserDict( UserDict ):
 
         :type object_version: ``None``, ``False``, any scalar value
         :returns: a generator for instances of the user-defined :class:`MongoUserDict` subclass
-        :raises MongoObjectsAuthFailed: if `authorize_pre_read()` has been overriden
+        :raises MongoObjectsAuthFailed: if `authorize_pre_read()` has been overridden
           and does not return a truthy value
         """
 
@@ -286,7 +316,7 @@ class MongoUserDict( UserDict ):
         :param no_match: Value to return if no matching document is found
         :type no_match: ``None`` or any value
         :returns: *no_match* value; ``None`` by default
-        :raises MongoObjectsAuthFailed: if `authorize_pre_read()` has been overriden
+        :raises MongoObjectsAuthFailed: if `authorize_pre_read()` has been overridden
           and does not return a truthy value
         """
         # Authorize reading at all
@@ -492,7 +522,7 @@ class MongoUserDict( UserDict ):
 
         :param force: if ``True``, upsert the new document regardless of its `_updated` timestamp
         :type force: *bool*, optional
-        :raises MongoObjectsAuthFailed: if `authorize_save()` has been overriden
+        :raises MongoObjectsAuthFailed: if `authorize_save()` has been overridden
           and does not return a truthy value
         """
 
@@ -638,7 +668,7 @@ class PolymorphicMongoUserDict( MongoUserDict ):
         :param object_version: as with :meth:`MongoUserDict.find`
         :returns: a generator for instances of the user-defined :class:`PolymorphicMongoUserDict` subclasses,
           each correct for the document being returned
-        :raises MongoObjectsAuthFailed: if `authorize_pre_read()` has been overriden
+        :raises MongoObjectsAuthFailed: if `authorize_pre_read()` has been overridden
           and does not return a truthy value
         """
 
@@ -684,7 +714,7 @@ class PolymorphicMongoUserDict( MongoUserDict ):
         :param no_match: as with :meth:`MongoUserDict.find_one`
         :returns: an instance of the user-defined :class:`PolymorphicMongoUserDict` subclass
           correct for this document
-        :raises MongoObjectsAuthFailed: if :meth:`.authorize_pre_read()` has been overriden
+        :raises MongoObjectsAuthFailed: if :meth:`.authorize_pre_read()` has been overridden
           and does not return a truthy value
         """
 

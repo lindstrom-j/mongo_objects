@@ -75,6 +75,46 @@ def getVersionedPopulatedMMUDClass( getMMUDClass, sampleData ):
 class TestVersioning:
     """Test how various methods perform with object versioning"""
 
+    def test_count_documents_current_version( self, getVersionedPopulatedMMUDClass ):
+        MMUD = getVersionedPopulatedMMUDClass
+
+        # verify there is a current object version
+        assert MMUD.object_version is not None
+
+        # There should only be one document at the current version (the default query)
+        assert MMUD.count_documents() == 1
+
+
+    def test_count_documents_specified_version( self, getVersionedPopulatedMMUDClass ):
+        MMUD = getVersionedPopulatedMMUDClass
+
+        # verify there is a current object version
+        assert MMUD.object_version is not None
+
+        # There should only be one document at each specified version
+        assert MMUD.count_documents() == 1
+
+
+    def test_count_documents_versioning_suppressed( self, getVersionedPopulatedMMUDClass ):
+        MMUD = getVersionedPopulatedMMUDClass
+
+        # verify there is a current object version
+        assert MMUD.object_version is not None
+
+        # Suppressing versions should return all sample data
+        assert MMUD.count_documents( object_version=False ) == 3
+
+
+    def test_count_documents_nonexistent_version( self, getVersionedPopulatedMMUDClass ):
+        MMUD = getVersionedPopulatedMMUDClass
+
+        # verify there is a current object version
+        assert MMUD.object_version is not None
+
+        # Nothing should be returned at a non-existent version
+        assert MMUD.count_documents( object_version=1000000 ) == 0
+
+
     def test_find_all_current_version( self, getVersionedPopulatedMMUDClass ):
         MMUD = getVersionedPopulatedMMUDClass
 
@@ -238,7 +278,7 @@ class TestSave:
         MMUD = getMMUDClass
 
         # count documents
-        assert MMUD.collection().count_documents( {} ) == 0
+        assert MMUD.count_documents( {} ) == 0
 
         # record the current time
         startTime = MMUD.utcnow()
@@ -248,7 +288,7 @@ class TestSave:
         obj.save()
 
         # verify a record was saved
-        assert MMUD.collection().count_documents( {} ) == 1
+        assert MMUD.count_documents( {} ) == 1
 
         # verify that ID was added to original object
         assert '_id' in obj
@@ -287,7 +327,7 @@ class TestSave:
         MMUD = getMMUDClass
 
         # count documents
-        count =  MMUD.collection().count_documents( {} )
+        count =  MMUD.count_documents( {} )
 
         # Create an empty document
         obj = MMUD()
@@ -304,7 +344,7 @@ class TestSave:
             obj.save()
 
         # verify that nothing was saved
-        assert MMUD.collection().count_documents( {} ) == count
+        assert MMUD.count_documents( {} ) == count
 
         # verify that _created and _updated were removed; _objver won't have been added anyway
         assert '_created' not in obj
@@ -317,7 +357,7 @@ class TestSave:
         MMUD = getMMUDClass
 
         # count documents
-        count = MMUD.collection().count_documents( {} )
+        count = MMUD.count_documents( {} )
 
         # save an empty document
         obj = MMUD()
@@ -325,7 +365,7 @@ class TestSave:
         original = obj.copy()
 
         # verify that the object was saved
-        assert MMUD.collection().count_documents( {} ) == count + 1
+        assert MMUD.count_documents( {} ) == count + 1
 
         # Confirm _id, _created and _updated are all set
         assert '_id' in obj
@@ -341,7 +381,7 @@ class TestSave:
             obj.save()
 
         # verify the document count hasn't changed
-        assert MMUD.collection().count_documents( {} ) == count + 1
+        assert MMUD.count_documents( {} ) == count + 1
 
         # verify that _created and _updated exist and weren't changed
         assert obj['_created'] == original['_created']
@@ -359,7 +399,7 @@ class TestSave:
         MMUD = getMMUDClass
 
         # count documents
-        count =  MMUD.collection().count_documents( {} )
+        count =  MMUD.count_documents( {} )
 
         # record the current time
         startTime = MMUD.utcnow()
@@ -378,7 +418,7 @@ class TestSave:
             obj.save()
 
         # verify that nothing was saved
-        assert MMUD.collection().count_documents( {} ) == count
+        assert MMUD.count_documents( {} ) == count
 
         # verify that _updated wasn't changed
         assert obj.get('_updated') == original_updated
@@ -387,7 +427,7 @@ class TestSave:
         obj.save( force=True )
 
         # verify that something was saved
-        assert MMUD.collection().count_documents( {} ) == count+1
+        assert MMUD.count_documents( {} ) == count+1
 
         # verify that timestamp has been updated
         assert obj['_updated'] >= startTime
@@ -403,7 +443,7 @@ class TestSave:
         MMUD = getMMUDClass
 
         # count documents
-        count =  MMUD.collection().count_documents( {} )
+        count =  MMUD.count_documents( {} )
 
         # record the current time
         startTime = MMUD.utcnow()
@@ -418,7 +458,7 @@ class TestSave:
         obj.save()
 
         # verify that something was saved
-        assert MMUD.collection().count_documents( {} ) == count+1
+        assert MMUD.count_documents( {} ) == count+1
 
         # verify that timestamp has been updated
         assert obj['_updated'] >= startTime
@@ -435,7 +475,7 @@ class TestSave:
         MMUD = getMMUDClass
 
         # count documents
-        count =  MMUD.collection().count_documents( {} )
+        count =  MMUD.count_documents( {} )
 
         # record the current time
         startTime = MMUD.utcnow()
@@ -510,7 +550,7 @@ class TestDelete:
         obj.save()
 
         # verify a record was saved
-        assert MMUD.collection().count_documents( {} ) == 1
+        assert MMUD.count_documents( {} ) == 1
 
         # delete the object
         obj.delete()
@@ -519,7 +559,7 @@ class TestDelete:
         assert '_id' not in obj
 
         # verify a record was removed and the database is empty
-        assert MMUD.collection().count_documents( {} ) == 0
+        assert MMUD.count_documents( {} ) == 0
 
 
     def test_delete_new( self, getMMUDClass, sampleData ):
@@ -533,13 +573,13 @@ class TestDelete:
         assert '_id' not in obj
 
         # note the number of documents in the database
-        count = MMUD.collection().count_documents( {} )
+        count = MMUD.count_documents( {} )
 
         # delete the object
         obj.delete()
 
         # verify the database document count hasn't changed
-        assert count == MMUD.collection().count_documents( {} )
+        assert count == MMUD.count_documents( {} )
 
 
     def test_delete_no_auth( self, getPopulatedMMUDClass ):
@@ -551,14 +591,14 @@ class TestDelete:
         obj = LocalMMUD.find_one()
 
         # note the number of documents in the database
-        count = LocalMMUD.collection().count_documents( {} )
+        count = LocalMMUD.count_documents( {} )
 
         # verify deleting a document without authorization produces an exception
         with pytest.raises( mongo_objects.MongoObjectsAuthFailed ):
             obj.delete()
 
         # verify the database document count hasn't changed
-        assert count == LocalMMUD.collection().count_documents( {} )
+        assert count == LocalMMUD.count_documents( {} )
 
 
 
@@ -663,6 +703,23 @@ class TestBasics:
         assert isinstance( MMUD.collection(), Collection )
 
 
+    def test_count_documents( self, getPopulatedMMUDClass ):
+        MMUD = getPopulatedMMUDClass
+        assert MMUD.count_documents() == 3
+        assert MMUD.count_documents( {} ) == 3
+        assert MMUD.count_documents( { 'name': 'record 1' } ) == 1
+        assert MMUD.count_documents( { 'name': 'does-not-exist' } ) == 0
+
+
+    def test_count_documents_empty( self, mongo_db ):
+        class LocalMMUD( mongo_objects.MongoUserDict ):
+            collection_name = secrets.token_hex(6)
+            database = mongo_db
+
+        assert LocalMMUD.count_documents() == 0
+        assert LocalMMUD.count_documents( {} ) == 0
+
+
     def test_find_all( self, getPopulatedMMUDClass, sampleData ):
         MMUD = getPopulatedMMUDClass
 
@@ -673,7 +730,7 @@ class TestBasics:
 
         # verify that we found all the entries
         assert len( result ) == len( sampleData )
-        assert len( result ) == MMUD.collection().count_documents( {} )
+        assert len( result ) == MMUD.count_documents( {} )
 
         # verify type and data present
         # since no projection was used and readonly wasn't True,
