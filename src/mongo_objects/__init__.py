@@ -15,7 +15,11 @@
 #
 # Released under the MIT License
 
+# Pending tests:
+# register_custom_types() / saving and retrieving custom types
+
 from bson import ObjectId
+from bson.codec_options import DEFAULT_CODEC_OPTIONS, TypeRegistry
 from collections import UserDict
 import datetime
 from pymongo.collection import ReturnDocument
@@ -43,6 +47,30 @@ class MongoObjectsReadOnly( Exception ):
 
 class MongoObjectsSubclassError( Exception ):
     pass
+
+
+
+################################################################################
+# MongoDB codec options
+################################################################################
+
+# Codec handling
+# Keep separate from the MongoUserDict class so nothing can be overwritten
+# by subclasses
+# List of custom types registered with this module
+custom_types = []
+# The default codec options used as the base when new types are registered
+# This may be reset by the user if needed
+default_codec_options = DEFAULT_CODEC_OPTIONS
+# The current codec options in use. This is regenerated during each call
+# to register_custom_types()
+codec_options = DEFAULT_CODEC_OPTIONS
+
+def register_custom_type( type_codec ):
+    global codec_options
+    custom_types.append( type_codec )
+    codec_options = default_codec_options.with_options( type_registry=TypeRegistry( custom_types ) )
+
 
 
 ################################################################################
@@ -198,7 +226,7 @@ class MongoUserDict( UserDict ):
         This method must return a :class:`pymongo.Collection` object.
         """
 
-        return cls.database.get_collection( cls.collection_name )
+        return cls.database.get_collection( cls.collection_name, codec_options=codec_options )
 
 
     @classmethod
@@ -247,6 +275,11 @@ class MongoUserDict( UserDict ):
                 raise MongoObjectsAuthFailed
             self.collection().find_one_and_delete( { '_id' : ObjectId( self['_id'] ) } )
             del self['_id']
+
+
+    @classmethod
+    def drop( cls, **kwargs ):
+        return cls.collection().drop( **kwargs )
 
 
     @classmethod
@@ -469,8 +502,6 @@ class MongoUserDict( UserDict ):
         ids = self.split_id( id )
 
         # COMPATABILITY: 3.10+ use zip( args, ids, strict=True )
-        print( f"len ids{len(ids)}: {ids!r}" )
-        print( f"len args {len(args)} : {args!r}" )
         if len( args ) != len( ids ):
             raise ValueError
 
@@ -761,7 +792,6 @@ class PolymorphicMongoUserDict( MongoUserDict ):
           a ``None`` key was registered as the default.
         :meta private:
         """
-        print( repr( cls.subclass_map ) )
         # attempt to look up this key in the subclass map
         result = cls.subclass_map.get( subclass_key )
         # If no result was found but there is a ``None`` key,
@@ -1008,7 +1038,6 @@ class PolymorphicMongoBaseProxy( MongoBaseProxy ):
           a ``None`` key was registered as the default.
         :meta private:
         """
-        print( repr( cls.proxy_subclass_map ) )
         # attempt to look up this key in the subclass map
         result = cls.proxy_subclass_map.get( proxy_subclass_key )
         # If no result was found but there is a ``None`` key,
